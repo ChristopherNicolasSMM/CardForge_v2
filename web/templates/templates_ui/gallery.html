@@ -7,7 +7,10 @@
       <h1>Templates</h1>
       <p>Cada template define o layout do card: fundo, posição do texto, arte e estilo. Duplique um existente ou comece do zero.</p>
     </div>
-    <a href="{{ url_for('templates_bp.new') }}" class="btn btn-primary">+ Novo template</a>
+    <div class="row gap-sm">
+      <a href="{{ url_for('templates_bp.import_form') }}" class="btn">Importar de outra coleção</a>
+      <a href="{{ url_for('templates_bp.new') }}" class="btn btn-primary">+ Novo template</a>
+    </div>
   </div>
 
   {% if items %}

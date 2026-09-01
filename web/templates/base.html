@@ -14,9 +14,23 @@
   <div class="shell">
     <aside class="rail">
       <div class="rail-brand"><span class="mark">⚒</span> CardForge <span class="ver">2.0</span></div>
+
+      <a href="{{ url_for('collections_bp.index') }}" class="rail-collection">
+        <span class="rail-collection-label">coleção ativa</span>
+        <span class="rail-collection-name">
+          {% if g.collection %}
+            {{ g.collections_list|selectattr('slug','equalto',g.collection)|map(attribute='name')|first or g.collection }}
+          {% else %}
+            nenhuma — escolher
+          {% endif %}
+        </span>
+      </a>
+
       <nav>
         <a href="{{ url_for('main.hub') }}" class="{{ 'active' if request.endpoint == 'main.hub' }}">
           <span class="rail-icon">◆</span> Início</a>
+        <a href="{{ url_for('collections_bp.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('collections_bp') }}">
+          <span class="rail-icon">▣</span> Coleções</a>
         <a href="{{ url_for('templates_bp.gallery') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('templates_bp') }}">
           <span class="rail-icon">▦</span> Templates</a>
         <a href="{{ url_for('data_bp.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('data_bp') }}">

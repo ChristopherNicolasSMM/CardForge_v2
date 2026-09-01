@@ -45,18 +45,23 @@ cardforge2/
 │   ├── render/                → preview PIL, SVG builder, export raster, resolução de fontes
 │   └── proxy/                 → composição de folha + PDF
 │
-├── web/                      ← camada Flask (a parte nova da 2.0)
-│   ├── routes/                 → blueprints: hub, templates, dados, gerar, proxy
-│   ├── services/                → upload de assets, dataset por sessão
+├── web/                      ← camada Flask
+│   ├── routes/                 → blueprints: hub, coleções, templates, dados, gerar, proxy, wiki
+│   ├── services/                → coleções, upload de assets, dataset
 │   ├── templates/               → HTML (Jinja2)
 │   └── static/                  → CSS + JS (editor de canvas, tabela de dados)
 │
-├── templates/                ← seus modelos de card (pasta por template, com base.json)
-├── assets/
-│   ├── fonts/                  → fontes embutidas no CardForge
-│   ├── fonts_custom/            → fontes .ttf que você enviar globalmente
-│   └── library/                 → imagens de arte enviadas pela interface
-├── instance/                 ← dados de sessão (dataset em edição + lotes gerados) — gerado em runtime
+├── collections/               ← cada coleção (jogo, ou atualização de jogo) é uma pasta aqui
+│   └── <coleção>/
+│       ├── collection.json      → nome, descrição, jogo
+│       ├── templates/<nome>/     → modelos de card dessa coleção
+│       ├── assets/library/        → imagens de arte enviadas nessa coleção
+│       ├── assets/fonts_custom/    → fontes .ttf enviadas nessa coleção
+│       ├── data.json                → dataset de cards em edição
+│       └── output/                   → lotes gerados + PDFs de proxy
+│
+├── assets/fonts/              ← fontes embutidas no CardForge (sempre globais, todas as coleções)
+├── docs/                      ← manuais em .md, exibidos em /wiki
 ├── requirements.txt
 └── run.py
 ```
@@ -65,6 +70,7 @@ cardforge2/
 
 ## Fluxo de uso
 
+0. **Coleções** — crie (ou selecione) a coleção do jogo em que vai trabalhar. Tudo abaixo pertence a ela.
 1. **Templates** — crie um modelo novo (ou duplique um existente) e edite visualmente: arraste as camadas, ajuste fonte/cor/tamanho, defina fundo e verso.
 2. **Dados** — importe uma planilha ou monte a tabela direto no navegador. Pra imagens de arte, use o seletor visual (upload ou escolha da biblioteca).
 3. **Gerar** — escolha o template e os formatos (PNG/JPEG/WebP/SVG) e gere o lote inteiro. Baixe individualmente ou tudo em `.zip`.
@@ -72,16 +78,30 @@ cardforge2/
 
 ---
 
+## Coleções: um jogo, ou uma atualização de jogo
+
+Cada coleção é uma pasta autocontida — templates, dados, fontes e cards gerados de uma coleção nunca se misturam com os de outra. Use isso para separar jogos diferentes, ou uma expansão/atualização de um jogo já existente.
+
+- **Duplicar** uma coleção (pra criar uma atualização) deixa você escolher o que trazer: templates, fontes/imagens e/ou os dados já cadastrados.
+- **Importar um template** de outra coleção copia aquele modelo (com fundo, verso e fontes próprias) pra coleção atual, mantendo as duas independentes depois.
+
+Veja o manual completo em `/wiki` → **Coleções**.
+
+---
+
 ## Adicionando um novo modelo de card facilmente
 
 - Na galeria de **Templates**, clique em **+ Novo template**.
-- Pra reaproveitar um modelo existente, use **Herdar de** — o novo template herda todas as camadas do pai e você só ajusta o que for diferente (cor, fonte, posição específica).
+- Pra reaproveitar um modelo existente na mesma coleção, use **Herdar de** — o novo template herda todas as camadas do pai e você só ajusta o que for diferente (cor, fonte, posição específica).
 - Ou clique **Duplicar** num template existente pra partir de uma cópia completa.
+- Pra reaproveitar um template de **outra coleção**, use **Importar de outra coleção** na galeria.
 
 ---
 
 ## Notas técnicas
 
-- **Sem banco de dados** — tudo é arquivo. O dataset em edição e os lotes gerados ficam isolados por sessão de navegador em `instance/<sessão>/`, mas templates e bibliotecas de assets são compartilhados (é a mesma pasta `templates/` e `assets/` pra qualquer sessão — pensado pra uso local/pessoal, não multi-usuário).
-- **Geração síncrona** — a geração em lote roda na mesma requisição (sem fila/worker externo). Para datasets muito grandes (varias centenas de cards), considere gerar em lotes menores.
-- **Fontes**: a ordem de busca é `templates/<nome>/fonts/` → `assets/fonts_custom/` → `assets/fonts/`. Isso permite fontes exclusivas de um template sem afetar os demais.
+- **Sem banco de dados** — tudo é arquivo, organizado por coleção em `collections/<slug>/`. Isso torna cada coleção uma pasta que você pode copiar, arquivar ou versionar isoladamente.
+- **Coleção ativa por sessão de navegador** — abas diferentes podem estar trabalhando em coleções diferentes ao mesmo tempo; a seleção fica na sessão, mas os dados em si são sempre persistidos na pasta da coleção (não se perdem ao fechar o navegador).
+- **Geração síncrona** — a geração em lote roda na mesma requisição (sem fila/worker externo). Para datasets muito grandes (várias centenas de cards), considere gerar em lotes menores.
+- **Fontes**: a ordem de busca é `templates/<nome>/fonts/` (da coleção ativa) → `collections/<coleção>/assets/fonts_custom/` → `assets/fonts/` (embutidas, globais).
+- **Migração automática**: projetos criados antes do sistema de coleções têm seus templates/assets migrados automaticamente para uma coleção chamada "Geral" na primeira execução após a atualização.

@@ -19,17 +19,25 @@ CardForge é um motor de criação de cards para jogos de carta customizados. Vo
 
 **Campo** conecta uma camada a uma coluna do dataset. Por exemplo, uma camada de texto com campo `name` mostra o valor da coluna `name` daquela linha. Se o campo ficar vazio, a camada usa um **texto fixo** em vez de puxar do dataset — útil para textos que não mudam entre cards.
 
+## Coleções
+
+Todo o resto deste manual assume que você já tem uma **coleção** ativa. Uma coleção representa um jogo (ou uma atualização/expansão de um jogo) e organiza templates, dados, fontes e cards gerados numa pasta própria — veja o manual de [Coleções](08-colecoes) antes de continuar, se ainda não criou a sua.
+
 ## Onde os dados ficam
 
-CardForge não usa banco de dados — tudo é arquivo:
+CardForge não usa banco de dados — tudo é arquivo, organizado por coleção:
 
-- `templates/` — um subpasta por template, com seu `base.json` e imagens.
-- `assets/library/` — imagens de arte enviadas pela tela de Dados.
-- `assets/fonts_custom/` e `templates/<nome>/fonts/` — fontes `.ttf` enviadas.
-- `instance/` — o dataset em edição e os lotes já gerados, isolados por sessão de navegador.
+```
+collections/<coleção>/
+  templates/        ← modelos de card dessa coleção
+  assets/library/     ← imagens de arte enviadas
+  assets/fonts_custom/ ← fontes .ttf enviadas
+  data.json             ← dataset em edição
+  output/                 ← lotes gerados + PDFs de proxy
+```
 
-Isso quer dizer que templates e bibliotecas de imagem/fonte são **compartilhados** entre qualquer sessão — é a mesma pasta no disco. Já o dataset em edição e os resultados gerados ficam por sessão, para que abas diferentes não se atropelem.
+Cada coleção é isolada das demais — nada se mistura entre coleções, a menos que você [importe um template explicitamente](08-colecoes#importando-um-template-de-outra-coleção) de uma para outra.
 
 ## Próximos passos
 
-Continue pelo manual de [Templates](01-templates) para montar seu primeiro modelo, ou vá direto para [Dados](02-dados) se já tem um template pronto.
+Comece pelo manual de [Coleções](08-colecoes) pra criar seu primeiro projeto, depois siga para [Templates](01-templates) para montar seu primeiro modelo, ou vá direto para [Dados](02-dados) se já tem um template pronto.

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Nova coleção{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">nova coleção</span>
+      <h1>Criar coleção</h1>
+      <p>Uma coleção pode ser um jogo inteiro, ou uma atualização/expansão específica de um jogo que já existe.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="max-width: 520px;">
+    <form method="post">
+      <div class="field">
+        <label for="name">Nome da coleção</label>
+        <input type="text" id="name" name="name" required placeholder="ex: Dragões de Aetheria — Base">
+      </div>
+      <div class="field">
+        <label for="game">Jogo (opcional)</label>
+        <input type="text" id="game" name="game" placeholder="ex: Dragões de Aetheria">
+      </div>
+      <div class="field">
+        <label for="description">Descrição (opcional)</label>
+        <textarea id="description" name="description" placeholder="ex: Baralho base, 120 cards, primeira edição"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Criar coleção</button>
+      <a href="{{ url_for('collections_bp.index') }}" class="btn btn-ghost">Cancelar</a>
+    </form>
+  </div>
+{% endblock %}

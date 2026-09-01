@@ -1,20 +1,18 @@
 """
-Gerencia o "dataset atual" (lista de cards em edição) por sessão de navegador.
+Gerencia o dataset (lista de cards em edição) da coleção ativa.
 
-Sem banco de dados: cada sessão vira uma pasta em instance/<sid>/ com:
-  data.json     ← {"columns": [...], "rows": [...]}
-  output/       ← lotes gerados (PNG/JPEG/WebP/SVG) e proxies PDF
+Antes das Coleções, isso vivia em instance/<sessão-de-navegador>/ — dados
+efêmeros por aba do navegador. Agora o dataset é parte da própria Coleção,
+salvo em collections/<slug>/data.json, e persiste de verdade em disco junto
+com os templates e assets daquela coleção.
 """
 from __future__ import annotations
 
 import json
-import uuid
 from pathlib import Path
 from typing import Any
 
-from flask import session
-
-from web.config import INSTANCE_DIR
+from web.services import collections
 
 # Colunas conhecidas do modelo de dados do CardForge (core/data/reader.py)
 STANDARD_COLUMNS = [
@@ -30,23 +28,19 @@ COLUMN_LABELS = {
 }
 
 
-def get_session_id() -> str:
-    sid = session.get("sid")
-    if not sid:
-        sid = uuid.uuid4().hex[:16]
-        session["sid"] = sid
-    return sid
+class NoActiveCollection(RuntimeError):
+    """Levantado quando uma operação de dados é tentada sem coleção ativa."""
 
 
-def session_dir() -> Path:
-    d = INSTANCE_DIR / get_session_id()
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "output").mkdir(exist_ok=True)
-    return d
+def _require_slug() -> str:
+    slug = collections.get_active_slug()
+    if not slug:
+        raise NoActiveCollection("Nenhuma coleção ativa selecionada.")
+    return slug
 
 
 def _data_path() -> Path:
-    return session_dir() / "data.json"
+    return collections.data_path(_require_slug())
 
 
 def load_dataset() -> dict[str, Any]:
@@ -64,6 +58,7 @@ def save_dataset(columns: list[str], rows: list[dict]) -> None:
         json.dumps({"columns": columns, "rows": rows}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    collections.update_meta(_require_slug())
 
 
 def replace_rows_from_import(rows: list[dict]) -> dict:
@@ -78,4 +73,4 @@ def replace_rows_from_import(rows: list[dict]) -> dict:
 
 
 def output_dir() -> Path:
-    return session_dir() / "output"
+    return collections.output_dir(_require_slug())

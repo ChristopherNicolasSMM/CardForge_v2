@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Coleções{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">jogos &amp; atualizações</span>
+      <h1>Coleções</h1>
+      <p>Cada coleção é um jogo (ou uma atualização/expansão de um jogo) com seus próprios templates, dados, fontes e cards gerados — totalmente separados dos de outra coleção.</p>
+    </div>
+    <a href="{{ url_for('collections_bp.new') }}" class="btn btn-primary">+ Nova coleção</a>
+  </div>
+
+  {% if items %}
+    <div class="template-grid">
+      {% for c in items %}
+        <div class="template-card {{ 'is-active' if c.slug == active }}">
+          <div class="template-info">
+            <h3>{{ c.name }}{% if c.slug == active %} <span class="badge">ativa</span>{% endif %}</h3>
+            {% if c.game %}<div class="meta">{{ c.game }}</div>{% endif %}
+            {% if c.description %}<p style="font-size:.82rem; margin:8px 0 0;">{{ c.description }}</p>{% endif %}
+            <div class="meta mt">{{ c.template_count }} template(s) · {{ c.row_count }} card(s) nos dados</div>
+            {% if c.based_on %}<div class="meta">baseada em: {{ c.based_on }}</div>{% endif %}
+          </div>
+          <div class="template-actions" style="flex-wrap: wrap;">
+            {% if c.slug != active %}
+              <form method="post" action="{{ url_for('collections_bp.select', slug=c.slug) }}">
+                <button type="submit" class="btn btn-sm btn-primary">Selecionar</button>
+              </form>
+            {% endif %}
+            <a class="btn btn-sm" href="{{ url_for('collections_bp.edit', slug=c.slug) }}">Editar</a>
+            <a class="btn btn-sm" href="{{ url_for('collections_bp.duplicate', slug=c.slug) }}">Duplicar</a>
+            <form method="post" action="{{ url_for('collections_bp.delete', slug=c.slug) }}"
+                  onsubmit="return confirm('Excluir a coleção “{{ c.name }}” e tudo dentro dela (templates, dados, cards gerados)? Isso não pode ser desfeito.')">
+              <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      <a href="{{ url_for('collections_bp.new') }}" class="template-card new-card">
+        <div>+ Nova coleção</div>
+      </a>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>Nenhuma coleção ainda. Crie a primeira — pode ser o nome do seu jogo, por exemplo.</p>
+      <a href="{{ url_for('collections_bp.new') }}" class="btn btn-primary">+ Nova coleção</a>
+    </div>
+  {% endif %}
+{% endblock %}

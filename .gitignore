@@ -3,5 +3,6 @@ __pycache__/
 .venv/
 venv/
 instance/
+collections/*/output/
 *.egg-info/
 .DS_Store

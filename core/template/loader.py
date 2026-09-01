@@ -19,6 +19,7 @@ O loader detecta o formato automaticamente e converte legado → novo.
 """
 from __future__ import annotations
 
+import contextvars
 import json
 import copy
 from pathlib import Path
@@ -44,9 +45,31 @@ DEFAULT_GRADIENTS = {
 
 ROOT = Path(__file__).resolve().parent.parent.parent   # raiz do projeto (cardforge2/)
 
+# ── Raiz de templates "ativa" ────────────────────────────────────────────────
+# Por padrão os templates ficam em <raiz do projeto>/templates. Mas o CardForge
+# organiza templates por Coleção (um jogo, ou uma atualização de jogo), então a
+# camada web aponta essa raiz para a pasta templates/ de dentro da coleção ativa
+# durante cada requisição. Um ContextVar garante isolamento correto por
+# requisição mesmo com o servidor rodando múltiplas threads simultâneas —
+# ao contrário de uma variável de módulo comum, cada thread enxerga seu próprio
+# valor, sem risco de uma requisição vazar a coleção pra outra.
+_templates_root_override: "contextvars.ContextVar[Optional[Path]]" = \
+    contextvars.ContextVar("cardforge_templates_root_override", default=None)
+
+
+def set_templates_root(path: Path) -> contextvars.Token:
+    """Define a raiz de templates pro escopo atual (ex: a coleção ativa da requisição).
+    Retorna um token — guarde-o e passe pra reset_templates_root() ao final."""
+    return _templates_root_override.set(Path(path))
+
+
+def reset_templates_root(token: contextvars.Token) -> None:
+    _templates_root_override.reset(token)
+
 
 def templates_root() -> Path:
-    p = ROOT / "templates"
+    override = _templates_root_override.get()
+    p = override if override is not None else (ROOT / "templates")
     p.mkdir(parents=True, exist_ok=True)
     return p
 

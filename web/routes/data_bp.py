@@ -7,12 +7,12 @@ import tempfile
 from pathlib import Path
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                    flash, jsonify, send_file, send_from_directory)
+                    flash, jsonify, send_file, send_from_directory, g)
 
 from core.data.reader import read_data, supported_extensions
 from web.services import session_data as sd
 from web.services import assets as assets_service
-from web.config import LIBRARY_DIR
+from web.services import collections
 
 bp = Blueprint("data_bp", __name__, url_prefix="/data")
 
@@ -75,7 +75,7 @@ def export_csv():
         writer.writerow({c: row.get(c, "") for c in dataset["columns"]})
     mem = io.BytesIO(buf.getvalue().encode("utf-8-sig"))
     return send_file(mem, mimetype="text/csv", as_attachment=True,
-                      download_name="cardforge_dados.csv")
+                      download_name=f"cardforge_{g.collection}_dados.csv")
 
 
 # ── Biblioteca de artes (upload inline pro campo "art") ─────────────────────
@@ -86,7 +86,7 @@ def art_upload():
     if not file or not file.filename:
         return jsonify({"ok": False, "error": "Nenhum arquivo enviado"}), 400
     try:
-        fname = assets_service.save_library_image(file)
+        fname = assets_service.save_library_image(file, g.collection)
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
     return jsonify({"ok": True, "filename": fname,
@@ -95,7 +95,7 @@ def art_upload():
 
 @bp.route("/library")
 def library():
-    files = assets_service.list_library_images()
+    files = assets_service.list_library_images(g.collection)
     return jsonify([
         {"filename": f, "url": url_for("data_bp.library_file", filename=f)}
         for f in files
@@ -104,4 +104,4 @@ def library():
 
 @bp.route("/library/<path:filename>")
 def library_file(filename):
-    return send_from_directory(LIBRARY_DIR, filename)
+    return send_from_directory(collections.library_dir(g.collection), filename)

@@ -27,6 +27,21 @@
 .rail-brand .mark { color: var(--ember-hi); font-size: 1.3rem; }
 .rail-brand .ver { font-family: var(--font-mono); font-size: .65rem; color: var(--parchment-lo); }
 
+.rail-collection {
+  display: block; margin: 0 2px 18px; padding: 10px 12px;
+  background: var(--iron-panel); border: 1px solid var(--iron-line);
+  border-radius: var(--radius-sm);
+}
+.rail-collection:hover { border-color: var(--ember); }
+.rail-collection-label {
+  display: block; font-family: var(--font-mono); font-size: .64rem;
+  color: var(--temper-hi); margin-bottom: 3px;
+}
+.rail-collection-name {
+  display: block; font-size: .84rem; color: var(--parchment);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 .rail nav { display: flex; flex-direction: column; gap: 2px; }
 
 .rail a {
@@ -129,6 +144,7 @@
   background: var(--iron-panel); border: 1px solid var(--iron-line);
   border-radius: var(--radius-md); overflow: hidden;
 }
+.template-card.is-active { border-color: var(--forge-gold); }
 .template-thumb {
   aspect-ratio: 63/88; background: var(--iron);
   display: flex; align-items: center; justify-content: center;

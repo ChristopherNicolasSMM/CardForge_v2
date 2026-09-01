@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Duplicar coleção{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">atualização / expansão</span>
+      <h1>Duplicar “{{ meta.name }}”</h1>
+      <p>Útil para criar uma nova versão ou expansão de um jogo existente, partindo do que já foi montado.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="max-width: 520px;">
+    <form method="post">
+      <div class="field">
+        <label for="new_name">Nome da nova coleção</label>
+        <input type="text" id="new_name" name="new_name" required placeholder="ex: {{ meta.name }} — Expansão 2">
+      </div>
+      <div class="field">
+        <label>O que copiar da coleção original?</label>
+        <label class="check" style="margin-bottom:8px;"><input type="checkbox" name="include_templates" checked> Templates</label>
+        <label class="check" style="margin-bottom:8px;"><input type="checkbox" name="include_assets" checked> Fontes e imagens da biblioteca</label>
+        <label class="check"><input type="checkbox" name="include_data"> Dados (os cards já cadastrados)</label>
+        <div class="help-text">Pra uma atualização de jogo, o mais comum é levar templates e fontes, mas começar os dados do zero.</div>
+      </div>
+      <button type="submit" class="btn btn-primary">Duplicar coleção</button>
+      <a href="{{ url_for('collections_bp.index') }}" class="btn btn-ghost">Cancelar</a>
+    </form>
+  </div>
+{% endblock %}

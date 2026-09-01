@@ -1,41 +1,56 @@
 {% extends "base.html" %}
 {% block title %}Início{% endblock %}
 {% block content %}
-  <div class="page-head">
-    <div>
-      <span class="eyebrow">bancada de trabalho</span>
-      <h1>Forje seu próximo baralho</h1>
-      <p>Defina um modelo visual, alimente com dados do seu jogo e gere as artes finais — prontas pra imprimir ou usar digitalmente.</p>
+  {% if no_collection %}
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">bancada de trabalho</span>
+        <h1>Bem-vindo ao CardForge</h1>
+        <p>Antes de forjar cards, escolha ou crie uma coleção — cada coleção é um jogo (ou uma atualização/expansão de um jogo), com seus próprios templates, dados e cards gerados.</p>
+      </div>
     </div>
-  </div>
+    <div class="empty-state">
+      <p>Nenhuma coleção selecionada ainda.</p>
+      <a href="{{ url_for('collections_bp.index') }}" class="btn btn-primary">Escolher ou criar uma coleção</a>
+    </div>
+  {% else %}
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">bancada de trabalho · {{ collection.name }}</span>
+        <h1>Forje seu próximo baralho</h1>
+        <p>Defina um modelo visual, alimente com dados do seu jogo e gere as artes finais — prontas pra imprimir ou usar digitalmente.</p>
+      </div>
+      <a href="{{ url_for('collections_bp.index') }}" class="btn">Trocar coleção</a>
+    </div>
 
-  <div class="stat-row">
-    <div class="stat"><div class="n">{{ template_count }}</div><div class="l">templates</div></div>
-    <div class="stat"><div class="n">{{ row_count }}</div><div class="l">cards nos dados</div></div>
-    <div class="stat"><div class="n">{{ batch_count }}</div><div class="l">lotes gerados</div></div>
-  </div>
+    <div class="stat-row">
+      <div class="stat"><div class="n">{{ template_count }}</div><div class="l">templates</div></div>
+      <div class="stat"><div class="n">{{ row_count }}</div><div class="l">cards nos dados</div></div>
+      <div class="stat"><div class="n">{{ batch_count }}</div><div class="l">lotes gerados</div></div>
+    </div>
 
-  <h2>Módulos</h2>
-  <div class="module-grid">
-    <a class="module-card" href="{{ url_for('templates_bp.gallery') }}">
-      <span class="glyph">▦</span>
-      <h3>Templates</h3>
-      <p>Crie e edite modelos visuais com camadas de texto, imagem e fundo.</p>
-    </a>
-    <a class="module-card" href="{{ url_for('data_bp.index') }}">
-      <span class="glyph">☰</span>
-      <h3>Dados</h3>
-      <p>Importe uma planilha ou edite os cards direto numa tabela.</p>
-    </a>
-    <a class="module-card" href="{{ url_for('generate_bp.index') }}">
-      <span class="glyph">▶</span>
-      <h3>Gerar</h3>
-      <p>Renderize o lote inteiro em PNG, JPEG, WebP ou SVG.</p>
-    </a>
-    <a class="module-card" href="{{ url_for('proxy_bp.index') }}">
-      <span class="glyph">▤</span>
-      <h3>Proxy / PDF</h3>
-      <p>Monte a folha de impressão em A4/A3 com marcas de corte e verso.</p>
-    </a>
-  </div>
+    <h2>Módulos</h2>
+    <div class="module-grid">
+      <a class="module-card" href="{{ url_for('templates_bp.gallery') }}">
+        <span class="glyph">▦</span>
+        <h3>Templates</h3>
+        <p>Crie e edite modelos visuais com camadas de texto, imagem e fundo.</p>
+      </a>
+      <a class="module-card" href="{{ url_for('data_bp.index') }}">
+        <span class="glyph">☰</span>
+        <h3>Dados</h3>
+        <p>Importe uma planilha ou edite os cards direto numa tabela.</p>
+      </a>
+      <a class="module-card" href="{{ url_for('generate_bp.index') }}">
+        <span class="glyph">▶</span>
+        <h3>Gerar</h3>
+        <p>Renderize o lote inteiro em PNG, JPEG, WebP ou SVG.</p>
+      </a>
+      <a class="module-card" href="{{ url_for('proxy_bp.index') }}">
+        <span class="glyph">▤</span>
+        <h3>Proxy / PDF</h3>
+        <p>Monte a folha de impressão em A4/A3 com marcas de corte e verso.</p>
+      </a>
+    </div>
+  {% endif %}
 {% endblock %}

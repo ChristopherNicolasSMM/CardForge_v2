@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Importar template{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">entre coleções</span>
+      <h1>Importar template de outra coleção</h1>
+      <p>Copia um template de outra coleção pra dentro desta, com todas as fontes e imagens de fundo próprias dele.</p>
+    </div>
+  </div>
+
+  {% if not others %}
+    <div class="empty-state">
+      <p>Não há outra coleção com templates pra importar.</p>
+      <a href="{{ url_for('templates_bp.gallery') }}" class="btn">Voltar</a>
+    </div>
+  {% else %}
+    <div class="panel" style="max-width: 520px;">
+      <form method="post" action="{{ url_for('templates_bp.import_run') }}">
+        <div class="field">
+          <label for="collection">Coleção de origem</label>
+          <select id="collection" name="collection">
+            {% for c in others %}<option value="{{ c.slug }}">{{ c.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="template">Template</label>
+          <select id="template" name="template"></select>
+        </div>
+        <div class="field">
+          <label for="new_name">Novo nome (opcional)</label>
+          <input type="text" id="new_name" name="new_name" placeholder="deixe em branco pra manter o nome original">
+        </div>
+        <button type="submit" class="btn btn-primary">Importar</button>
+        <a href="{{ url_for('templates_bp.gallery') }}" class="btn btn-ghost">Cancelar</a>
+      </form>
+    </div>
+  {% endif %}
+
+  <script>
+    async function loadTemplates() {
+      const sel = document.getElementById('collection');
+      const tSel = document.getElementById('template');
+      if (!sel) return;
+      const res = await fetch(`{{ url_for('templates_bp.import_list') }}?collection=${encodeURIComponent(sel.value)}`);
+      const names = await res.json();
+      tSel.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('') || '<option value="">— sem templates —</option>';
+    }
+    const collectionSelect = document.getElementById('collection');
+    if (collectionSelect) {
+      collectionSelect.addEventListener('change', loadTemplates);
+      loadTemplates();
+    }
+  </script>
+{% endblock %}

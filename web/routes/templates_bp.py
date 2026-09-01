@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                    flash, send_from_directory, jsonify, abort, Response)
+                    flash, send_from_directory, jsonify, abort, Response, g)
 
 from core.template.loader import (
     load_template, save_template, create_template, delete_template,
@@ -206,7 +206,7 @@ def upload_font(name):
     if not file or not file.filename:
         return jsonify({"ok": False, "error": "Nenhum arquivo enviado"}), 400
     try:
-        family = assets_service.save_font(file, template_dir=template_dir(name))
+        family = assets_service.save_font(file, g.collection, template_dir=template_dir(name))
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
     return jsonify({"ok": True, "family": family,
@@ -256,3 +256,46 @@ def font_file(name, family):
 @bp.route("/api/list")
 def api_list():
     return jsonify(list_templates())
+
+
+# ── Importar template de outra coleção ──────────────────────────────────────
+
+@bp.route("/import")
+def import_form():
+    from web.services import collections
+    others = [c for c in collections.list_collections() if c.slug != g.collection]
+    return render_template("templates_ui/import.html", others=others)
+
+
+@bp.route("/import/list")
+def import_list():
+    """Lista os templates de outra coleção (pra popular o seletor do formulário)."""
+    from web.services import collections
+    from core.template.loader import set_templates_root, reset_templates_root
+    src = request.args.get("collection", "")
+    if not src or not collections.exists(src):
+        return jsonify([])
+    token = set_templates_root(collections.templates_dir(src))
+    try:
+        names = list_templates()
+    finally:
+        reset_templates_root(token)
+    return jsonify(names)
+
+
+@bp.route("/import", methods=["POST"])
+def import_run():
+    from web.services import collections
+    src = request.form.get("collection", "")
+    name = request.form.get("template", "")
+    new_name = (request.form.get("new_name") or "").strip() or None
+    if not src or not name:
+        flash("Escolha a coleção de origem e o template.", "error")
+        return redirect(url_for("templates_bp.import_form"))
+    try:
+        imported_name = collections.import_template(g.collection, src, name, new_name)
+    except FileNotFoundError as e:
+        flash(str(e), "error")
+        return redirect(url_for("templates_bp.import_form"))
+    flash(f"Template “{imported_name}” importado de “{src}”.", "success")
+    return redirect(url_for("templates_bp.edit", name=imported_name))

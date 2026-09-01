@@ -3,19 +3,38 @@ Resolução de diretórios de fontes.
 
 Ordem de busca (primeiro que tiver o arquivo, vence):
   1. fonts/ dentro da própria pasta do template  (fonte específica daquele modelo)
-  2. assets/fonts_custom/                         (fontes enviadas pelo usuário, globais)
-  3. assets/fonts/                                (fontes embutidas no CardForge)
+  2. assets/fonts_custom/ da coleção ativa        (fontes enviadas pelo usuário nessa coleção)
+  3. assets/fonts/                                (fontes embutidas no CardForge, sempre globais)
 
 Isso é usado tanto pelo PreviewRenderer (PIL) quanto pelo SVGBuilder (SVG),
 para que os dois pipelines de renderização enxerguem exatamente as mesmas fontes.
 """
 from __future__ import annotations
 
+import contextvars
 from pathlib import Path
 
 ROOT           = Path(__file__).resolve().parent.parent.parent
-BUILTIN_FONTS  = ROOT / "assets" / "fonts"
-CUSTOM_FONTS   = ROOT / "assets" / "fonts_custom"
+BUILTIN_FONTS  = ROOT / "assets" / "fonts"          # embutidas, sempre globais
+_DEFAULT_CUSTOM_FONTS = ROOT / "assets" / "fonts_custom"
+
+# Assim como a raiz de templates, a pasta de fontes customizadas é
+# escopada por Coleção — veja core/template/loader.py para a explicação
+# do uso de ContextVar aqui.
+_custom_fonts_override: "contextvars.ContextVar[Path | None]" = \
+    contextvars.ContextVar("cardforge_custom_fonts_override", default=None)
+
+
+def set_custom_fonts_dir(path: Path) -> contextvars.Token:
+    return _custom_fonts_override.set(Path(path))
+
+
+def reset_custom_fonts_dir(token: contextvars.Token) -> None:
+    _custom_fonts_override.reset(token)
+
+
+def _custom_fonts_dir() -> Path:
+    return _custom_fonts_override.get() or _DEFAULT_CUSTOM_FONTS
 
 
 def resolve_font_dirs(template_dir: Path | None = None) -> list[Path]:
@@ -24,8 +43,9 @@ def resolve_font_dirs(template_dir: Path | None = None) -> list[Path]:
         tdir_fonts = Path(template_dir) / "fonts"
         if tdir_fonts.exists():
             dirs.append(tdir_fonts)
-    if CUSTOM_FONTS.exists():
-        dirs.append(CUSTOM_FONTS)
+    custom = _custom_fonts_dir()
+    if custom.exists():
+        dirs.append(custom)
     if BUILTIN_FONTS.exists():
         dirs.append(BUILTIN_FONTS)
     return dirs
