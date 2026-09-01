@@ -25,6 +25,8 @@
           <span class="rail-icon">▶</span> Gerar</a>
         <a href="{{ url_for('proxy_bp.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('proxy_bp') }}">
           <span class="rail-icon">▤</span> Proxy / PDF</a>
+        <a href="{{ url_for('wiki_bp.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('wiki_bp') }}">
+          <span class="rail-icon">?</span> Manual</a>
       </nav>
       <div class="rail-foot">Motor de cards para jogos de carta customizados.</div>
     </aside>

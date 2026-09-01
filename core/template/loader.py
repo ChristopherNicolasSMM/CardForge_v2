@@ -42,7 +42,7 @@ DEFAULT_GRADIENTS = {
     "artifact":  {"stops": [["0%","#C8C8C8"],["100%","#909090"]]},
 }
 
-ROOT = Path(__file__).resolve().parent.parent.parent   # cardforge/
+ROOT = Path(__file__).resolve().parent.parent.parent   # raiz do projeto (cardforge2/)
 
 
 def templates_root() -> Path:

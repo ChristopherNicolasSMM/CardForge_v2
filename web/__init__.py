@@ -20,12 +20,14 @@ def create_app() -> Flask:
     from .routes.data_bp import bp as data_bp
     from .routes.generate_bp import bp as generate_bp
     from .routes.proxy_bp import bp as proxy_bp
+    from .routes.wiki_bp import bp as wiki_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(templates_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(generate_bp)
     app.register_blueprint(proxy_bp)
+    app.register_blueprint(wiki_bp)
 
     @app.context_processor
     def inject_nav():
@@ -34,7 +36,8 @@ def create_app() -> Flask:
             ("templates_bp.gallery", "Templates"),
             ("data_bp.index", "Dados"),
             ("generate_bp.index", "Gerar"),
-            ("proxy_bp.index", "Proxy"),
+            ("proxy_bp.index", "Proxy / PDF"),
+            ("wiki_bp.index", "Manual"),
         ]}
 
     return app
