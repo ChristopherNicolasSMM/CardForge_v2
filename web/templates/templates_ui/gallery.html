@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Templates{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">modelos visuais</span>
+      <h1>Templates</h1>
+      <p>Cada template define o layout do card: fundo, posição do texto, arte e estilo. Duplique um existente ou comece do zero.</p>
+    </div>
+    <a href="{{ url_for('templates_bp.new') }}" class="btn btn-primary">+ Novo template</a>
+  </div>
+
+  {% if items %}
+    <div class="template-grid">
+      {% for item in items %}
+        <div class="template-card">
+          <a href="{{ url_for('templates_bp.edit', name=item.name) }}">
+            <div class="template-thumb">
+              <img src="{{ url_for('templates_bp.thumbnail', name=item.name) }}" alt="{{ item.name }}" loading="lazy">
+            </div>
+          </a>
+          <div class="template-info">
+            <h3>{{ item.name }}</h3>
+            {% if item.error %}
+              <div class="meta" style="color: var(--danger)">erro ao carregar</div>
+            {% else %}
+              <div class="meta">{{ item.layers }} camadas · {{ item.w|round(0)|int }}×{{ item.h|round(0)|int }}mm</div>
+            {% endif %}
+          </div>
+          <div class="template-actions">
+            <a class="btn btn-sm" href="{{ url_for('templates_bp.edit', name=item.name) }}">Editar</a>
+            <form method="post" action="{{ url_for('templates_bp.duplicate', name=item.name) }}" onsubmit="return prepDup(this)">
+              <input type="hidden" name="new_name" value="">
+              <button type="submit" class="btn btn-sm">Duplicar</button>
+            </form>
+            <form method="post" action="{{ url_for('templates_bp.delete', name=item.name) }}"
+                  onsubmit="return confirm('Excluir o template “{{ item.name }}”? Isso não pode ser desfeito.')">
+              <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      <a href="{{ url_for('templates_bp.new') }}" class="template-card new-card">
+        <div>+ Novo template</div>
+      </a>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>Nenhum template ainda. Crie o primeiro pra começar a forjar seus cards.</p>
+      <a href="{{ url_for('templates_bp.new') }}" class="btn btn-primary">+ Novo template</a>
+    </div>
+  {% endif %}
+
+  <script>
+    function prepDup(form) {
+      const name = prompt('Nome do novo template:');
+      if (!name) return false;
+      form.new_name.value = name;
+      return true;
+    }
+  </script>
+{% endblock %}

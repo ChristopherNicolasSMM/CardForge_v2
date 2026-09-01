@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Proxy / PDF{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">impressão</span>
+      <h1>Proxy de impressão</h1>
+      <p>Monta uma folha (A4/A3/Letter) com os cards dos Dados, marcas de corte e verso opcional — pronta pra imprimir.</p>
+    </div>
+  </div>
+
+  {% if row_count == 0 %}
+    <div class="empty-state">
+      <p>Não há cards nos Dados ainda.</p>
+      <a href="{{ url_for('data_bp.index') }}" class="btn btn-primary">Ir para Dados</a>
+    </div>
+  {% elif not templates %}
+    <div class="empty-state">
+      <p>Nenhum template criado ainda.</p>
+      <a href="{{ url_for('templates_bp.new') }}" class="btn btn-primary">Criar template</a>
+    </div>
+  {% else %}
+    <div class="panel" style="max-width: 560px;">
+      <form method="post" action="{{ url_for('proxy_bp.run') }}" enctype="multipart/form-data">
+        <div class="field">
+          <label>Template</label>
+          <select name="template" id="proxyTemplate" onchange="location.href='{{ url_for('proxy_bp.index') }}?template=' + this.value">
+            {% for t in templates %}
+              <option value="{{ t }}" {{ 'selected' if t == selected }}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Formato da folha</label>
+            <select name="page_format">
+              {% for f in page_formats %}<option value="{{ f }}" {{ 'selected' if f == 'A4' }}>{{ f }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field"><label>Colunas</label><input type="number" name="cols" value="3" min="1" max="10"></div>
+          <div class="field"><label>Linhas</label><input type="number" name="rows" value="3" min="1" max="10"></div>
+        </div>
+
+        <div class="field-row">
+          <div class="field"><label>Margem (mm)</label><input type="number" name="margin_mm" value="10" step="0.5"></div>
+          <div class="field"><label>Espaço entre cards (mm)</label><input type="number" name="gap_mm" value="2" step="0.5"></div>
+        </div>
+
+        <label class="check" style="margin-bottom:10px"><input type="checkbox" name="crop_marks" checked> Marcas de corte</label>
+        <label class="check" style="margin-bottom:14px"><input type="checkbox" name="include_back" {{ 'checked' if back_image }}> Incluir folha de verso</label>
+
+        <div class="field">
+          <label>Imagem de verso {% if back_image %}(já definida no template — envie outra pra sobrescrever){% endif %}</label>
+          <input type="file" name="back_image_file" accept=".png,.jpg,.jpeg,.webp">
+        </div>
+
+        <p class="help-text" style="margin-top:0">{{ row_count }} card(s) na folha.</p>
+        <button type="submit" class="btn btn-primary">▤ Gerar PDF de proxy</button>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if proxies %}
+    <h2 class="mt">PDFs gerados nesta sessão</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Arquivo</th><th></th></tr></thead>
+        <tbody>
+          {% for p in proxies %}
+          <tr>
+            <td>{{ p }}</td>
+            <td><a class="btn btn-sm" href="{{ url_for('proxy_bp.download', filename=p) }}">⇩ Baixar PDF</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}

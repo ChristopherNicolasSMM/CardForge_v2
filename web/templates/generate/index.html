@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Gerar{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">produção em lote</span>
+      <h1>Gerar cards</h1>
+      <p>Renderiza todos os cards dos Dados usando o template escolhido.</p>
+    </div>
+  </div>
+
+  {% if row_count == 0 %}
+    <div class="empty-state">
+      <p>Não há cards nos Dados ainda.</p>
+      <a href="{{ url_for('data_bp.index') }}" class="btn btn-primary">Ir para Dados</a>
+    </div>
+  {% elif not templates %}
+    <div class="empty-state">
+      <p>Nenhum template criado ainda.</p>
+      <a href="{{ url_for('templates_bp.new') }}" class="btn btn-primary">Criar template</a>
+    </div>
+  {% else %}
+    <div class="panel" style="max-width: 520px;">
+      <form method="post" action="{{ url_for('generate_bp.run') }}">
+        <div class="field">
+          <label>Template</label>
+          <select name="template" required>
+            {% for t in templates %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Formatos de saída</label>
+          {% for fmt in formats %}
+            <label class="check" style="margin-bottom:6px">
+              <input type="checkbox" name="formats" value="{{ fmt }}" {{ 'checked' if fmt in ('PNG','SVG') }}> {{ fmt }}
+            </label>
+          {% endfor %}
+        </div>
+        <p class="help-text" style="margin-top:0">
+          {{ row_count }} card(s) serão gerados.
+          {% if row_count > warn_threshold %}
+            <br><strong style="color: var(--forge-gold)">Lote grande — a geração pode levar alguns segundos, a página ficará carregando até terminar.</strong>
+          {% endif %}
+        </p>
+        <button type="submit" class="btn btn-primary">▶ Gerar todos os cards</button>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if batches %}
+    <h2 class="mt">Lotes gerados nesta sessão</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Template</th><th>Cards</th><th>Formatos</th><th></th></tr></thead>
+        <tbody>
+          {% for b in batches %}
+          <tr>
+            <td>{{ b.template }}</td>
+            <td class="num">{{ b.count }}</td>
+            <td>{{ b.formats|join(', ') }}</td>
+            <td><a class="btn btn-sm" href="{{ url_for('generate_bp.results', batch_id=b.id) }}">Ver resultado</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}

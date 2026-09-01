@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Novo template{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">novo modelo</span>
+      <h1>Criar template</h1>
+      <p>Comece do zero (layout clássico de card) ou herde de um template existente pra reaproveitar camadas.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="max-width: 520px;">
+    <form method="post" enctype="multipart/form-data">
+      <div class="field">
+        <label for="name">Nome do template</label>
+        <input type="text" id="name" name="name" required placeholder="ex: dragoes-vermelhos">
+      </div>
+      <div class="field">
+        <label for="parent">Herdar de (opcional)</label>
+        <select id="parent" name="parent">
+          <option value="">— nenhum, começar do zero —</option>
+          {% for p in parents %}
+            <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+        <div class="help-text">O template filho herda todas as camadas do pai e você só ajusta o que for diferente.</div>
+      </div>
+      <div class="field">
+        <label for="background">Imagem de fundo (opcional)</label>
+        <input type="file" id="background" name="background" accept=".png,.jpg,.jpeg,.webp">
+      </div>
+      <button type="submit" class="btn btn-primary">Criar e abrir editor</button>
+      <a href="{{ url_for('templates_bp.gallery') }}" class="btn btn-ghost">Cancelar</a>
+    </form>
+  </div>
+{% endblock %}

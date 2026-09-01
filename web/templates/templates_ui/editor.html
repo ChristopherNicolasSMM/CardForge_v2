@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Editar {{ name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">editor visual</span>
+      <h1>{{ name }}</h1>
+      <p>Arraste as camadas no canvas pra reposicionar. Use a alça no canto inferior direito pra redimensionar.</p>
+    </div>
+    <div class="row gap-sm">
+      <button class="btn" id="btnRealPreview">◎ Ver renderização real</button>
+      <button class="btn btn-primary" id="btnSave">Salvar template</button>
+    </div>
+  </div>
+
+  <div class="editor-grid">
+    <!-- Painel esquerdo: camadas -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">camadas</div>
+        <div class="layer-list" id="layerList"></div>
+        <select id="newLayerType" style="width:100%; margin-bottom:6px;">
+          <option value="text">texto</option>
+          <option value="image">imagem (arte)</option>
+          <option value="background">fundo</option>
+          <option value="mana">custo/ícone</option>
+        </select>
+        <button class="btn btn-sm" style="width:100%" id="btnAddLayer">+ Adicionar camada</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">fundo &amp; verso</div>
+        <div class="field">
+          <label>Imagem de fundo</label>
+          <input type="file" id="bgUpload" accept=".png,.jpg,.jpeg,.webp">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Imagem de verso (proxy de impressão)</label>
+          <input type="file" id="backUpload" accept=".png,.jpg,.jpeg,.webp">
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">fontes</div>
+        <div class="field" style="margin-bottom:8px">
+          <label>Enviar fonte .ttf pra este template</label>
+          <input type="file" id="fontUpload" accept=".ttf">
+        </div>
+        <div class="help-text" style="margin:0">Fontes disponíveis: <span id="fontCount">{{ fonts|length }}</span></div>
+      </div>
+    </div>
+
+    <!-- Centro: canvas -->
+    <div class="editor-canvas-wrap">
+      <canvas id="cardCanvas" width="378" height="528"></canvas>
+    </div>
+
+    <!-- Painel direito: propriedades -->
+    <div class="panel" id="propsPanel">
+      <div class="panel-title">propriedades</div>
+      <div id="propsEmpty" class="help-text" style="margin:0">Selecione uma camada no canvas ou na lista à esquerda.</div>
+      <form id="propsForm" style="display:none">
+        <div class="field">
+          <label>Rótulo</label>
+          <input type="text" id="p_label">
+        </div>
+        <div class="field">
+          <label>Campo do dataset (vazio = texto fixo)</label>
+          <input type="text" id="p_field" placeholder="ex: name, mana_cost...">
+        </div>
+        <div class="field" id="p_staticWrap">
+          <label>Texto fixo</label>
+          <input type="text" id="p_static">
+        </div>
+        <div class="field-row">
+          <div class="field"><label>X (mm)</label><input type="number" step="0.1" id="p_x"></div>
+          <div class="field"><label>Y (mm)</label><input type="number" step="0.1" id="p_y"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Largura (mm)</label><input type="number" step="0.1" id="p_w"></div>
+          <div class="field"><label>Altura (mm)</label><input type="number" step="0.1" id="p_h"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Camada (z-index)</label><input type="number" id="p_z"></div>
+          <div class="field"><label>Encaixe</label>
+            <select id="p_fit"><option value="cover">cover</option><option value="contain">contain</option><option value="stretch">stretch</option></select>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="p_visible"> Visível</label>
+        <label class="check" style="margin-top:6px"><input type="checkbox" id="p_multiline"> Multilinha</label>
+
+        <hr class="section-divider">
+        <div class="field">
+          <label>Fonte</label>
+          <select id="p_font"></select>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Tamanho (pt)</label><input type="number" step="0.5" id="p_size"></div>
+          <div class="field"><label>Entrelinha (pt, 0=auto)</label><input type="number" step="0.5" id="p_lh"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Peso</label>
+            <select id="p_weight"><option value="normal">normal</option><option value="bold">bold</option></select>
+          </div>
+          <div class="field"><label>Estilo</label>
+            <select id="p_style"><option value="normal">normal</option><option value="italic">italic</option></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Alinhamento</label>
+            <select id="p_align"><option value="left">esquerda</option><option value="center">centro</option><option value="right">direita</option></select>
+          </div>
+          <div class="field"><label>Cor</label><input type="color" id="p_color" class="color-swatch"></div>
+        </div>
+
+        <hr class="section-divider">
+        <button type="button" class="btn btn-sm btn-danger" style="width:100%" id="btnDeleteLayer">Excluir camada</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de preview real -->
+  <div class="modal-overlay" id="previewModal">
+    <div class="modal">
+      <h3>Renderização real</h3>
+      <p style="font-size:.82rem">Usando dados de exemplo — assim ficará o card gerado de verdade.</p>
+      <img id="previewImg" style="width:100%; border:1px solid var(--iron-line); border-radius:4px;">
+      <div class="row" style="justify-content:flex-end; margin-top:12px;">
+        <button class="btn" onclick="document.getElementById('previewModal').classList.remove('open')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.CF_TEMPLATE = {{ template_json|safe }};
+    window.CF_TEMPLATE_NAME = {{ name|tojson }};
+    window.CF_DIMS = {{ dims|tojson }};
+    window.CF_FONTS = {{ fonts|tojson }};
+    window.CF_DEMO_ROW = {{ demo_row|safe }};
+    window.CF_URLS = {
+      asset: "{{ url_for('templates_bp.asset', name=name, filename='__F__') }}".replace('__F__', ''),
+      font: "{{ url_for('templates_bp.font_file', name=name, family='__F__') }}".replace('__F__.ttf', ''),
+      save: "{{ url_for('templates_bp.save', name=name) }}",
+      preview: "{{ url_for('templates_bp.preview', name=name) }}",
+      background: "{{ url_for('templates_bp.upload_background', name=name) }}",
+      backImage: "{{ url_for('templates_bp.upload_back_image', name=name) }}",
+      font_upload: "{{ url_for('templates_bp.upload_font', name=name) }}",
+    };
+  </script>
+  <script src="{{ url_for('static', filename='js/editor.js') }}"></script>
+{% endblock %}

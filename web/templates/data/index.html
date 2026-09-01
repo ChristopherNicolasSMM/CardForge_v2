@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Dados{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">dataset de cards</span>
+      <h1>Dados</h1>
+      <p>Cada linha vira um card. Edite direto na tabela, ou importe uma planilha ({{ supported_ext|join(', ') }}).</p>
+    </div>
+    <div class="row gap-sm">
+      <a class="btn" href="{{ url_for('data_bp.export_csv') }}">Exportar CSV</a>
+      <button class="btn btn-primary" id="btnSaveData">Salvar alterações</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">importar arquivo</div>
+    <form method="post" action="{{ url_for('data_bp.upload') }}" enctype="multipart/form-data" class="row">
+      <input type="file" name="file" accept="{{ supported_ext|join(',') }}" required>
+      <button type="submit" class="btn">Importar (substitui a tabela atual)</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div class="row between">
+      <div class="panel-title" style="margin-bottom:0">tabela de cards — {{ rows|length }} linha(s)</div>
+      <div class="row gap-sm">
+        <input type="text" id="newColName" placeholder="nome da nova coluna" style="width:160px; background:var(--iron); border:1px solid var(--iron-line); color:var(--parchment); padding:6px 8px; border-radius:3px; font-size:.8rem;">
+        <button class="btn btn-sm" id="btnAddCol">+ Coluna</button>
+        <button class="btn btn-sm btn-primary" id="btnAddRow">+ Card</button>
+      </div>
+    </div>
+    <div class="table-wrap mt">
+      <table class="data-table" id="dataTable"></table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">preview ao vivo</div>
+    <div class="row wrap gap-sm" style="margin-bottom:14px;">
+      <select id="previewTemplate" style="background:var(--iron); border:1px solid var(--iron-line); color:var(--parchment); padding:8px 10px; border-radius:3px;"></select>
+      <select id="previewRow" style="background:var(--iron); border:1px solid var(--iron-line); color:var(--parchment); padding:8px 10px; border-radius:3px;"></select>
+      <button class="btn" id="btnPreviewRow">Visualizar card</button>
+    </div>
+    <img id="previewRowImg" style="max-width:260px; border:1px solid var(--iron-line); border-radius:4px; display:none;">
+  </div>
+
+  <!-- Modal biblioteca de imagens -->
+  <div class="modal-overlay" id="libModal">
+    <div class="modal">
+      <h3>Escolher imagem</h3>
+      <div class="field">
+        <label>Enviar nova imagem</label>
+        <input type="file" id="libUploadInput" accept=".png,.jpg,.jpeg,.webp">
+      </div>
+      <div class="asset-grid" id="libGrid"></div>
+      <div class="row" style="justify-content:flex-end; margin-top:12px;">
+        <button class="btn" onclick="document.getElementById('libModal').classList.remove('open')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.CF_COLUMNS = {{ columns|tojson }};
+    window.CF_ROWS = {{ rows|tojson }};
+    window.CF_COLUMN_LABELS = {{ column_labels|tojson }};
+    window.CF_URLS = {
+      save: "{{ url_for('data_bp.save') }}",
+      artUpload: "{{ url_for('data_bp.art_upload') }}",
+      library: "{{ url_for('data_bp.library') }}",
+      previewBase: "{{ url_for('templates_bp.gallery') }}",
+    };
+  </script>
+  <script>
+    // lista de templates carregada separadamente (evita import circular no Jinja)
+    fetch("{{ url_for('templates_bp.api_list') }}").then(r => r.json()).then(list => {
+      const sel = document.getElementById('previewTemplate');
+      sel.innerHTML = list.map(n => `<option value="${n}">${n}</option>`).join('') || '<option value="">— nenhum template —</option>';
+    });
+  </script>
+  <script src="{{ url_for('static', filename='js/data-table.js') }}"></script>
+{% endblock %}
