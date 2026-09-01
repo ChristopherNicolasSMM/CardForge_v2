@@ -1,3 +1,11 @@
+<p align="center">
+  <img src="\cardforge.png" alt="CardForge" width="180">
+</p>
+
+<p align="center"><strong>CardForge By Christopher N. S. M. Mauricio</strong></p>
+
+
+
 # CardForge 2.0
 
 Gerador de cards para jogos de carta customizados — agora via navegador (Flask), no lugar da interface desktop (Tkinter) da versão 1.
