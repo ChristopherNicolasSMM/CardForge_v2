@@ -18,9 +18,11 @@ importação explícita de um template (ver import_template).
 """
 from __future__ import annotations
 
+import gc
 import json
 import re
 import shutil
+import stat
 import time
 import unicodedata
 from dataclasses import dataclass, field
@@ -168,10 +170,45 @@ def update_meta(slug: str, **fields) -> None:
     p.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _rmtree_retry(path: Path, attempts: int = 5, delay_s: float = 0.3) -> None:
+    """shutil.rmtree resiliente a bloqueios transitórios de arquivo no Windows
+    (antivírus, indexação do Explorer, ou um handle da própria aplicação que
+    ainda não foi liberado pelo garbage collector). Tenta algumas vezes,
+    liberando referências entre as tentativas, antes de desistir."""
+
+    def _on_error(func, target, exc_info):
+        # Arquivo/pasta somente-leitura no Windows: tenta destravar e refazer.
+        try:
+            import os
+            os.chmod(target, stat.S_IWRITE)
+            func(target)
+        except Exception:
+            pass
+
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path, onerror=_on_error)
+            return
+        except Exception as e:
+            last_error = e
+            # Libera fontes/imagens que a aplicação possa ainda estar
+            # segurando em cache e dá uma chance do SO destravar o arquivo.
+            try:
+                from core.render.preview_renderer import clear_font_cache
+                clear_font_cache()
+            except Exception:
+                pass
+            gc.collect()
+            time.sleep(delay_s)
+    if path.exists():
+        raise last_error  # type: ignore[misc]
+
+
 def delete_collection(slug: str) -> None:
     d = collection_dir(slug)
     if d.exists():
-        shutil.rmtree(d)
+        _rmtree_retry(d)
 
 
 def duplicate_collection(src_slug: str, new_name: str,

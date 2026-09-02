@@ -12,6 +12,7 @@ Layout padrão: 3×3 = 9 cards por A4
 """
 from __future__ import annotations
 
+import io
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -131,7 +132,13 @@ def compose_proxy(
 def _load_back(path: Optional[Path], w: int, h: int) -> Image.Image:
     if path and path.exists():
         try:
-            img = Image.open(path).convert("RGBA")
+            # Le os bytes em memoria (BytesIO) em vez de abrir o caminho
+            # direto — evita segurar o arquivo aberto no Windows.
+            with open(path, "rb") as f:
+                data = f.read()
+            img = Image.open(io.BytesIO(data))
+            img.load()
+            img = img.convert("RGBA")
             return img.resize((w, h), Image.LANCZOS)
         except Exception:
             pass

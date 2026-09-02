@@ -11,6 +11,7 @@ Lógica de rendering:
 """
 from __future__ import annotations
 
+import io
 import re
 import textwrap
 from pathlib import Path
@@ -29,6 +30,18 @@ FONT_FILES = {
 }
 
 _font_cache: dict[tuple, ImageFont.FreeTypeFont] = {}
+
+
+def clear_font_cache() -> None:
+    """Esvazia o cache de fontes carregadas.
+
+    Chamado antes de operações que apagam pastas de fontes em disco (ex:
+    excluir uma coleção). Na prática, como _load_font já lê o .ttf pra
+    memória (BytesIO) em vez de manter o arquivo aberto, isso não é mais
+    estritamente necessário pra liberar o arquivo no Windows — mas mantém o
+    cache limpo caso a mesma fonte seja recriada com conteúdo diferente
+    logo em seguida."""
+    _font_cache.clear()
 
 
 def _load_font(family: str, size_pt: float, weight: str = "normal", style: str = "normal",
@@ -50,7 +63,15 @@ def _load_font(family: str, size_pt: float, weight: str = "normal", style: str =
         fpath = find_font_file(resolved_name, template_dir)
         if fpath:
             try:
-                font = ImageFont.truetype(str(fpath), size_px)
+                # Importante: carrega os bytes e fecha o arquivo imediatamente,
+                # em vez de passar o caminho direto pro Pillow. ImageFont.truetype(path)
+                # mantém o arquivo aberto (via FreeType) pelo tempo de vida do
+                # objeto de fonte — no Windows isso trava o arquivo (e a pasta
+                # que o contém) até o processo terminar, impedindo excluir a
+                # coleção depois. Carregando de um BytesIO, o arquivo em disco
+                # fica livre assim que a leitura termina.
+                data = fpath.read_bytes()
+                font = ImageFont.truetype(io.BytesIO(data), size_px)
                 _font_cache[key] = font
                 return font
             except Exception:
@@ -115,6 +136,18 @@ def _wrap_text(text: str, font, max_width: int) -> list[str]:
     if current:
         lines.append(current)
     return lines or [""]
+
+
+def _open_image(path: Path) -> Image.Image:
+    """Abre uma imagem a partir dos bytes em memória, não do caminho direto.
+
+    Mesmo motivo do BytesIO em _load_font: evita manter um handle aberto pro
+    arquivo no disco (o que trava exclusão de pastas no Windows)."""
+    with open(path, "rb") as f:
+        data = f.read()
+    img = Image.open(io.BytesIO(data))
+    img.load()
+    return img
 
 
 class PreviewRenderer:
@@ -189,7 +222,7 @@ class PreviewRenderer:
             bg_path = self.template_dir / layer.source_image
             if bg_path.exists():
                 try:
-                    bg = Image.open(bg_path).convert("RGBA")
+                    bg = _open_image(bg_path).convert("RGBA")
                     bg = _fit_image(bg, w, h, layer.fit)
                     img.paste(bg, (x, y), bg)
                     return
@@ -225,7 +258,7 @@ class PreviewRenderer:
             p = base / art_path_str
             if p.exists():
                 try:
-                    art = Image.open(p).convert("RGBA")
+                    art = _open_image(p).convert("RGBA")
                     art = _fit_image(art, w, h, layer.fit)
                     img.paste(art, (x, y), art)
                 except Exception as e:
