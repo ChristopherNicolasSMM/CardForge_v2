@@ -23,6 +23,18 @@
         <label for="description">Descrição (opcional)</label>
         <textarea id="description" name="description" placeholder="ex: Baralho base, 120 cards, primeira edição"></textarea>
       </div>
+      <div class="field">
+        <label>Campos de dados iniciais</label>
+        <label class="check" style="margin-bottom:8px;">
+          <input type="radio" name="start_fields" value="standard" checked>
+          Campos padrão de card (nome, custo, tipo, texto de regras, força/resistência...)
+        </label>
+        <label class="check">
+          <input type="radio" name="start_fields" value="blank">
+          Começar em branco — meu jogo usa campos totalmente diferentes
+        </label>
+        <div class="help-text">Não é definitivo: você sempre pode adicionar, renomear ou remover campos depois, na tela de Dados.</div>
+      </div>
       <button type="submit" class="btn btn-primary">Criar coleção</button>
       <a href="{{ url_for('collections_bp.index') }}" class="btn btn-ghost">Cancelar</a>
     </form>

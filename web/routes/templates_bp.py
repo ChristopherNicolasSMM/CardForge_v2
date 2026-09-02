@@ -19,13 +19,41 @@ from web.services import assets as assets_service
 
 bp = Blueprint("templates_bp", __name__, url_prefix="/templates")
 
-DEMO_ROW = {
+# Usado apenas como último fallback, pra campos que nem a coleção ativa nem
+# um card de exemplo real tiverem (ex: um template herdado do modelo padrão
+# usado numa coleção com esquema totalmente diferente).
+BASE_DEMO_ROW = {
     "name": "Nome do Card", "mana_cost": "2R", "type_line": "Tipo — Subtipo",
     "rules_text": "Texto de regras do card aparece aqui.",
     "flavor_text": "\u201cUma frase de sabor.\u201d",
     "power": "3", "toughness": "3", "artist": "Artista",
     "color": "red",
 }
+
+
+def _demo_row() -> dict:
+    """Monta uma linha de exemplo pra preview/miniatura usando os campos reais
+    da coleção ativa sempre que possível — assim funciona também pra jogos
+    com esquema de dados totalmente diferente do padrão MTG."""
+    from web.services import session_data as sd
+    try:
+        dataset = sd.load_dataset()
+    except Exception:
+        dataset = {"columns": [], "rows": []}
+    columns = dataset.get("columns") or []
+    rows = dataset.get("rows") or []
+
+    if rows:
+        row = dict(rows[0])  # card real: preview o mais fiel possível
+    elif columns:
+        row = {c: f"[{c}]" for c in columns}  # placeholder legível por campo
+    else:
+        row = {}
+
+    row.setdefault("color", "colorless")
+    for k, v in BASE_DEMO_ROW.items():
+        row.setdefault(k, v)
+    return row
 
 
 # ── Galeria ──────────────────────────────────────────────────────────────────
@@ -50,7 +78,8 @@ def thumbnail(name):
         t = load_template(name)
         tdir = template_dir(name)
         renderer = PreviewRenderer(t, tdir, preview_dpi=110)
-        img = renderer.render(DEMO_ROW, color_key="colorless")
+        demo = _demo_row()
+        img = renderer.render(demo, color_key=demo.get("color", "colorless"))
     except Exception:
         abort(404)
     buf = io.BytesIO()
@@ -139,6 +168,8 @@ def edit(name):
         abort(404)
     tdir = template_dir(name)
     fonts = assets_service.all_font_choices(tdir)
+    from web.services import session_data as sd
+    dataset_columns = sd.load_dataset().get("columns", [])
     return render_template(
         "templates_ui/editor.html",
         name=name,
@@ -148,7 +179,8 @@ def edit(name):
         fonts=fonts,
         gradients=sorted(t.gradients.keys()),
         parents=[p for p in list_templates() if p != name],
-        demo_row=json.dumps(DEMO_ROW),
+        demo_row=json.dumps(_demo_row()),
+        dataset_columns=dataset_columns,
     )
 
 
@@ -218,7 +250,7 @@ def preview(name):
     """Renderiza um card único (PNG base64) a partir do JSON do template + uma row.
     Usado tanto pelo editor (preview ao vivo) quanto pela tela de Dados."""
     payload = request.get_json(force=True, silent=True) or {}
-    row = payload.get("row") or DEMO_ROW
+    row = payload.get("row") or _demo_row()
     template_data = payload.get("template")
 
     tdir = template_dir(name)

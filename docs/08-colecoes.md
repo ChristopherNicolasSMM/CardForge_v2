@@ -27,6 +27,7 @@ Em **Coleções → + Nova coleção**, informe:
 - **Nome** — obrigatório.
 - **Jogo** (opcional) — útil quando várias coleções pertencem ao mesmo jogo (ex: "Base", "Expansão 1", "Expansão 2" todas do mesmo jogo).
 - **Descrição** (opcional).
+- **Campos de dados iniciais** — escolha entre os campos padrão sugeridos (estilo MTG: nome, custo, tipo...) ou começar em branco, se o seu jogo usa um esquema de dados totalmente diferente. Veja mais em [Dados](02-dados#campos-totalmente-customizados-jogos-com-esquema-diferente).
 
 ## Duplicando uma coleção (atualização de jogo)
 

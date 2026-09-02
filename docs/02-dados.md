@@ -16,7 +16,22 @@ Clique em qualquer célula para editar o texto. Use **+ Card** para adicionar um
 
 Depois de editar, clique em **Salvar alterações** — a edição na tabela não é salva automaticamente.
 
-## Colunas padrão
+## Campos totalmente customizados (jogos com esquema diferente)
+
+Os "Colunas padrão" acima são só um **ponto de partida sugerido**, no estilo Magic — nada nelas é obrigatório. Se o seu jogo usa conceitos completamente diferentes (ex: "Ataque", "Defesa", "Elemento", "Nível de Energia"), você tem duas formas de trabalhar só com os seus próprios campos:
+
+1. **Ao criar a coleção**, escolha a opção **"Começar em branco"** — o dataset dessa coleção nasce sem nenhum campo padrão, e você monta a lista do zero com **+ Coluna**.
+2. **Numa coleção já existente**, use os ícones no cabeçalho de cada coluna da tabela:
+   - **✎ (renomear)** — muda o nome do campo em todos os cards de uma vez (ex: transformar `power` em `ataque`).
+   - **✕ (remover)** — apaga o campo de todos os cards.
+
+Importar um arquivo (CSV/XLSX/YAML/JSON) também respeita isso: as colunas do dataset passam a ser exatamente as colunas que o seu arquivo trouxe — nenhum campo padrão de MTG é adicionado à força se o seu arquivo não os tiver.
+
+### Mapeando campos no template
+
+No editor de template, o campo **"Campo do dataset"** de cada camada (veja o manual de [Templates](01-templates)) sugere automaticamente, num autocomplete, os nomes de campo que já existem no dataset da coleção ativa — assim fica fácil conectar visualmente cada camada do card ao dado certo, mesmo com um esquema totalmente próprio.
+
+## Colunas padrão (ponto de partida sugerido, estilo MTG)
 
 | Coluna | Uso |
 |---|---|
@@ -39,6 +54,8 @@ Em vez de digitar um caminho de arquivo, clique em **Escolher** na célula da co
 
 - Selecionar uma imagem já enviada anteriormente.
 - Enviar uma nova imagem (fica disponível para qualquer card, não só o atual).
+
+> O seletor visual de imagem aparece especificamente na coluna chamada `art`. Se você remover ou renomear esse campo, a célula volta a ser um texto comum (ainda funciona, só sem o seletor) — para ter o seletor de volta, crie novamente uma coluna com esse nome exato.
 
 ## Exportando
 

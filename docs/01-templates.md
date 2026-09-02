@@ -32,7 +32,7 @@ Todas as posições são salvas em milímetros, então o card se comporta do mes
 | Campo | O que faz |
 |---|---|
 | Rótulo | Nome de exibição na lista de camadas (não afeta a renderização) |
-| Campo do dataset | Nome da coluna que alimenta essa camada (ex: `name`, `power`). Deixe vazio para usar texto fixo. |
+| Campo do dataset | Nome da coluna que alimenta essa camada (ex: `name`, `power`). Deixe vazio para usar texto fixo. Sugere automaticamente os campos que já existem no dataset da coleção ativa. |
 | Texto fixo | Usado quando o campo está vazio — um texto que não muda entre cards |
 | X, Y, Largura, Altura | Posição e tamanho em milímetros |
 | Camada (z-index) | Ordem de empilhamento — maior fica na frente |

@@ -14,7 +14,11 @@ from typing import Any
 
 from web.services import collections
 
-# Colunas conhecidas do modelo de dados do CardForge (core/data/reader.py)
+# Campos padrão sugeridos como ponto de partida (estilo MTG) — só usados
+# quando uma coleção nova opta por eles ou quando um dataset fica totalmente
+# vazio. Nenhum campo aqui é obrigatório: renomeie, remova ou adicione
+# quantos campos quiser pela tela de Dados — cada coleção pode ter um
+# esquema de dados completamente diferente.
 STANDARD_COLUMNS = [
     "name", "mana_cost", "type_line", "rules_text", "flavor_text",
     "power", "toughness", "artist", "rarity", "art", "color",
@@ -62,12 +66,19 @@ def save_dataset(columns: list[str], rows: list[dict]) -> None:
 
 
 def replace_rows_from_import(rows: list[dict]) -> dict:
-    """Usado após ler um arquivo (CSV/XLSX/YAML/JSON) via core.data.reader."""
-    columns = list(STANDARD_COLUMNS)
+    """Usado após ler um arquivo (CSV/XLSX/YAML/JSON) via core.data.reader.
+
+    As colunas vêm dos campos que o arquivo realmente trouxe — não força os
+    campos padrão de MTG, já que a coleção pode ser de um jogo com um
+    esquema de dados completamente diferente. Se o arquivo vier vazio, mantém
+    os campos padrão como ponto de partida (mais fácil que começar do zero)."""
+    columns: list[str] = []
     for row in rows:
         for k in row.keys():
             if k not in columns:
                 columns.append(k)
+    if not columns:
+        columns = list(STANDARD_COLUMNS)
     save_dataset(columns, rows)
     return {"columns": columns, "rows": rows}
 

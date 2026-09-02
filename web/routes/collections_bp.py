@@ -22,11 +22,15 @@ def new():
     name = (request.form.get("name") or "").strip()
     description = (request.form.get("description") or "").strip()
     game = (request.form.get("game") or "").strip()
+    start_fields = request.form.get("start_fields", "standard")
+    if start_fields not in ("standard", "blank"):
+        start_fields = "standard"
     if not name:
         flash("Dê um nome à coleção.", "error")
         return redirect(url_for("collections_bp.new"))
 
-    slug = collections.create_collection(name, description=description, game=game)
+    slug = collections.create_collection(name, description=description, game=game,
+                                          start_fields=start_fields)
     collections.set_active_slug(slug)
     flash(f"Coleção “{name}” criada e selecionada.", "success")
     return redirect(url_for("main.hub"))

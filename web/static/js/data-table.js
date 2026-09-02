@@ -12,7 +12,11 @@
 
   function renderTable() {
     const table = document.getElementById("dataTable");
-    const thead = `<thead><tr>${columns.map(c => `<th>${label(c)}</th>`).join("")}<th></th></tr></thead>`;
+    const thead = `<thead><tr>${columns.map(c => `<th>
+        <span class="col-label">${label(c)}</span>
+        <span class="col-action" title="Renomear campo" onclick="CF_renameColumn('${c}')">✎</span>
+        <span class="col-action" title="Remover campo" onclick="CF_removeColumn('${c}')">✕</span>
+      </th>`).join("")}<th></th></tr></thead>`;
     const tbody = "<tbody>" + rows.map((row, i) => {
       const cells = columns.map(col => {
         if (col === "art") {
@@ -47,6 +51,26 @@
 
   window.CF_removeRow = function (i) {
     rows.splice(i, 1);
+    renderTable();
+  };
+
+  window.CF_removeColumn = function (col) {
+    if (!confirm(`Remover o campo "${label(col)}" de todos os cards? Os valores desse campo serão perdidos.`)) return;
+    columns = columns.filter(c => c !== col);
+    rows.forEach(r => { delete r[col]; });
+    renderTable();
+  };
+
+  window.CF_renameColumn = function (col) {
+    const input = prompt(`Novo nome do campo (sem espaços, ex: ataque):`, col);
+    if (!input) return;
+    const key = input.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
+    if (!key || key === col) return;
+    if (columns.includes(key)) { alert("Já existe um campo com esse nome."); return; }
+    columns = columns.map(c => c === col ? key : c);
+    rows.forEach(r => {
+      if (col in r) { r[key] = r[col]; delete r[col]; }
+    });
     renderTable();
   };
 

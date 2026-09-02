@@ -141,7 +141,15 @@ def list_collections() -> list[CollectionMeta]:
 
 
 def create_collection(name: str, description: str = "", game: str = "",
-                       based_on: str | None = None) -> str:
+                       based_on: str | None = None, start_fields: str = "standard") -> str:
+    """
+    start_fields:
+      "standard" → dataset novo já vem com os campos padrão sugeridos
+                   (nome, custo, tipo... estilo MTG), prontos pra editar.
+      "blank"    → dataset novo começa sem nenhum campo — útil quando o jogo
+                   tem um esquema de dados totalmente diferente e você
+                   prefere montar os campos do zero pela tela de Dados.
+    """
     slug = slugify(name)
     base_slug = slug
     n = 2
@@ -159,6 +167,12 @@ def create_collection(name: str, description: str = "", game: str = "",
         "name": name, "description": description, "game": game,
         "based_on": based_on, "created_at": now, "updated_at": now,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    if start_fields == "blank":
+        (d / "data.json").write_text(
+            json.dumps({"columns": [], "rows": []}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
     return slug
 
 

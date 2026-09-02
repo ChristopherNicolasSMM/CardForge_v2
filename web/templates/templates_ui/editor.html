@@ -66,7 +66,10 @@
         </div>
         <div class="field">
           <label>Campo do dataset (vazio = texto fixo)</label>
-          <input type="text" id="p_field" placeholder="ex: name, mana_cost...">
+          <input type="text" id="p_field" list="datasetFieldsList" placeholder="ex: name, mana_cost...">
+          <datalist id="datasetFieldsList">
+            {% for col in dataset_columns %}<option value="{{ col }}">{% endfor %}
+          </datalist>
         </div>
         <div class="field" id="p_staticWrap">
           <label>Texto fixo</label>

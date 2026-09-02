@@ -127,7 +127,9 @@ READERS = {
 def read_data(path: Path | str) -> list[dict]:
     """
     Lê qualquer formato suportado e retorna lista de dicts normalizados.
-    Filtra linhas sem 'name'.
+    Descarta apenas linhas totalmente vazias (nenhum campo preenchido) —
+    não exige nenhum campo específico, já que coleções diferentes podem usar
+    esquemas de dados completamente distintos (nem toda coleção tem "name").
     """
     path = Path(path)
     ext  = path.suffix.lower()
@@ -135,7 +137,7 @@ def read_data(path: Path | str) -> list[dict]:
     if not reader_fn:
         raise ValueError(f"Formato não suportado: {ext}. "
                          f"Use: {', '.join(READERS)}")
-    rows = [r for r in reader_fn(path) if r.get("name")]
+    rows = [r for r in reader_fn(path) if any(v for v in r.values())]
     return rows
 
 

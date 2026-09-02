@@ -185,6 +185,11 @@ table.data-table th {
   font-size: .72rem; color: var(--temper-hi); padding: 8px 10px;
   border-bottom: 1px solid var(--iron-line); white-space: nowrap;
 }
+table.data-table th .col-label { margin-right: 6px; }
+table.data-table th .col-action {
+  cursor: pointer; opacity: .55; padding: 0 2px; font-family: var(--font-ui);
+}
+table.data-table th .col-action:hover { opacity: 1; color: var(--ember-hi); }
 table.data-table td {
   padding: 4px; border-bottom: 1px solid var(--iron-line-lo);
   vertical-align: middle;
