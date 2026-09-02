@@ -1,0 +1,42 @@
+{
+  "columns": [
+    "rotulo",
+    "cervejaria",
+    "escola",
+    "estilo",
+    "abv",
+    "ibu",
+    "ebc",
+    "volume",
+    "informacoes",
+    "descricao",
+    "logo",
+    "ilustracao",
+    "familia",
+    "lote",
+    "harmon1",
+    "harmon2",
+    "harmon3"
+  ],
+  "rows": [
+    {
+      "abv": "4.5",
+      "cervejaria": "Valirian",
+      "descricao": "Cerveja de coloração rubi com espuma persistente.",
+      "ebc": "18",
+      "escola": "Inglesa",
+      "estilo": "Red Ale",
+      "familia": "Red Ale",
+      "harmon1": "Queijos suaves",
+      "harmon2": "Chocolates amargos",
+      "harmon3": "Frutas secas",
+      "ibu": "20",
+      "ilustracao": "Ilustracao_Red_Ale.png",
+      "informacoes": "Uma cerveja de cor avermelhada, com aroma maltado e notas de caramelo.",
+      "logo": "Cervejaria_Logo.png",
+      "lote": "Lote 121",
+      "rotulo": "Sangue de Druida",
+      "volume": "500ml"
+    }
+  ]
+}
