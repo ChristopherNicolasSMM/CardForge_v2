@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 import time
 import zipfile
 from pathlib import Path
@@ -150,3 +151,52 @@ def zip_download(batch_id):
     mem.seek(0)
     return send_file(mem, mimetype="application/zip", as_attachment=True,
                       download_name=f"cardforge_{batch_id}.zip")
+
+
+def _safe_batch_dir(batch_id: str) -> Path:
+    """Resolve a pasta do lote garantindo que ela realmente fica dentro de
+    output/ da coleção ativa (protege contra path traversal via batch_id)."""
+    out = sd.output_dir().resolve()
+    target = (out / batch_id).resolve()
+    try:
+        target.relative_to(out)
+    except ValueError:
+        abort(404)
+    return target
+
+
+@bp.route("/delete/<batch_id>", methods=["POST"])
+def delete_batch(batch_id):
+    batch_dir = _safe_batch_dir(batch_id)
+    if batch_dir.exists() and (batch_dir / "batch.json").exists():
+        shutil.rmtree(batch_dir)
+        flash("Lote excluído.", "success")
+    else:
+        flash("Lote não encontrado.", "error")
+    return redirect(url_for("generate_bp.index"))
+
+
+@bp.route("/delete-card/<batch_id>/<int:index>", methods=["POST"])
+def delete_card(batch_id, index):
+    batch_dir = _safe_batch_dir(batch_id)
+    meta_path = batch_dir / "batch.json"
+    if not meta_path.exists():
+        abort(404)
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    cards = meta.get("cards", [])
+    if index < 0 or index >= len(cards):
+        flash("Card não encontrado nesse lote.", "error")
+        return redirect(url_for("generate_bp.results", batch_id=batch_id))
+
+    entry = cards.pop(index)
+    for fmt, filename in entry.get("files", {}).items():
+        f = batch_dir / fmt.lower() / filename
+        if f.exists():
+            f.unlink()
+
+    meta["cards"] = cards
+    meta["count"] = len(cards)
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    flash(f"Card “{entry.get('name', '')}” excluído do lote.", "success")
+    return redirect(url_for("generate_bp.results", batch_id=batch_id))

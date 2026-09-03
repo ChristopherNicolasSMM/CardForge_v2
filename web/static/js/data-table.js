@@ -10,6 +10,70 @@
 
   function label(col) { return LABELS[col] || col; }
 
+  // ── Auto-save ────────────────────────────────────────────────────────────
+
+  const AUTO_SAVE_DELAY_MS = 1000;
+  let isDirty = false;
+  let autoSaveTimer = null;
+  const saveStatusEl = document.getElementById("saveStatus");
+
+  function setSaveStatus(state) {
+    if (!saveStatusEl) return;
+    saveStatusEl.classList.remove("dirty", "saving", "saved");
+    if (state === "dirty") {
+      saveStatusEl.textContent = "Alterações não salvas…";
+      saveStatusEl.classList.add("dirty");
+    } else if (state === "saving") {
+      saveStatusEl.textContent = "Salvando…";
+      saveStatusEl.classList.add("saving");
+    } else if (state === "saved") {
+      const t = new Date();
+      const hh = String(t.getHours()).padStart(2, "0"), mm = String(t.getMinutes()).padStart(2, "0");
+      saveStatusEl.textContent = `Salvo às ${hh}:${mm}`;
+      saveStatusEl.classList.add("saved");
+    } else {
+      saveStatusEl.textContent = "";
+    }
+  }
+
+  function scheduleAutoSave() {
+    isDirty = true;
+    setSaveStatus("dirty");
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => { saveData(true); }, AUTO_SAVE_DELAY_MS);
+  }
+
+  window.addEventListener("beforeunload", evt => {
+    if (!isDirty) return;
+    evt.preventDefault();
+    evt.returnValue = "";
+  });
+
+  async function saveData(silent) {
+    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    setSaveStatus("saving");
+    let data;
+    try {
+      const res = await fetch(URLS.save, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ columns, rows }),
+      });
+      data = await res.json();
+    } catch (e) {
+      data = { ok: false };
+    }
+    if (data.ok) {
+      isDirty = false;
+      setSaveStatus("saved");
+    } else {
+      setSaveStatus("dirty");
+      if (!silent) alert("Erro ao salvar.");
+    }
+    return data.ok;
+  }
+
+  // ── Tabela ───────────────────────────────────────────────────────────────
+
   function renderTable() {
     const table = document.getElementById("dataTable");
     const thead = `<thead><tr>${columns.map(c => `<th>
@@ -39,6 +103,7 @@
       td.addEventListener("input", () => {
         const r = +td.dataset.row, c = td.dataset.col;
         rows[r][c] = td.textContent.trim();
+        scheduleAutoSave();
       });
     });
 
@@ -52,6 +117,7 @@
   window.CF_removeRow = function (i) {
     rows.splice(i, 1);
     renderTable();
+    scheduleAutoSave();
   };
 
   window.CF_removeColumn = function (col) {
@@ -59,6 +125,7 @@
     columns = columns.filter(c => c !== col);
     rows.forEach(r => { delete r[col]; });
     renderTable();
+    scheduleAutoSave();
   };
 
   window.CF_renameColumn = function (col) {
@@ -72,6 +139,7 @@
       if (col in r) { r[key] = r[col]; delete r[col]; }
     });
     renderTable();
+    scheduleAutoSave();
   };
 
   document.getElementById("btnAddRow").addEventListener("click", () => {
@@ -79,6 +147,7 @@
     columns.forEach(c => empty[c] = "");
     rows.push(empty);
     renderTable();
+    scheduleAutoSave();
   });
 
   document.getElementById("btnAddCol").addEventListener("click", () => {
@@ -90,17 +159,10 @@
     rows.forEach(r => r[name] = "");
     input.value = "";
     renderTable();
+    scheduleAutoSave();
   });
 
-  document.getElementById("btnSaveData").addEventListener("click", async () => {
-    const res = await fetch(URLS.save, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ columns, rows }),
-    });
-    const data = await res.json();
-    if (data.ok) alert(`${data.count} card(s) salvos.`);
-    else alert("Erro ao salvar.");
-  });
+  document.getElementById("btnSaveData").addEventListener("click", () => saveData(false));
 
   // ── Picker de imagens (biblioteca de assets) ────────────────────────────
 
@@ -124,6 +186,7 @@
     rows[artTargetRow].art = filename;
     document.getElementById("libModal").classList.remove("open");
     renderTable();
+    scheduleAutoSave();
   };
 
   document.getElementById("libUploadInput").addEventListener("change", async evt => {
@@ -136,6 +199,7 @@
       if (artTargetRow !== null) {
         rows[artTargetRow].art = data.filename;
         renderTable();
+        scheduleAutoSave();
       }
       document.getElementById("libModal").classList.remove("open");
     } else {

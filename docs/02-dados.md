@@ -14,7 +14,7 @@ Os nomes de coluna aceitam tanto o nome interno (`name`, `mana_cost`, `type_line
 
 Clique em qualquer célula para editar o texto. Use **+ Card** para adicionar uma linha vazia, e o **✕** no final da linha para remover uma. Use **+ Coluna** para adicionar um campo novo que ainda não existe.
 
-Depois de editar, clique em **Salvar alterações** — a edição na tabela não é salva automaticamente.
+As alterações são salvas automaticamente cerca de 1 segundo depois de parar de editar — um indicador ao lado dos botões mostra o status ("Alterações não salvas…" → "Salvo às HH:MM"). O botão **Salvar alterações** continua disponível pra salvar na hora, se preferir.
 
 ## Campos totalmente customizados (jogos com esquema diferente)
 

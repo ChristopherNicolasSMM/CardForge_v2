@@ -23,7 +23,7 @@ Quando o verso é incluído, cada página de verso é **espelhada horizontalment
 
 ## Gerando o PDF
 
-Clique em **▤ Gerar PDF de proxy**. O arquivo fica disponível na lista de PDFs gerados nesta sessão, com um botão de download.
+Clique em **▤ Gerar PDF de proxy**. O arquivo fica disponível na lista de PDFs gerados nesta sessão, com botões de download e exclusão. O nome do arquivo segue o padrão `<template>-proxy-ddmmaaaa_hhmmss.pdf` (data e hora da geração), pra facilitar identificar qual é qual quando há vários.
 
 ## Dicas de impressão
 

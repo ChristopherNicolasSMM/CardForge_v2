@@ -5,9 +5,10 @@
     <div>
       <span class="eyebrow">dataset de cards</span>
       <h1>Dados</h1>
-      <p>Cada linha vira um card. Edite direto na tabela, ou importe uma planilha ({{ supported_ext|join(', ') }}).</p>
+      <p>Cada linha vira um card. Edite direto na tabela, ou importe uma planilha ({{ supported_ext|join(', ') }}). As alterações são salvas automaticamente.</p>
     </div>
     <div class="row gap-sm">
+      <span id="saveStatus" class="save-status"></span>
       <a class="btn" href="{{ url_for('data_bp.export_csv') }}">Exportar CSV</a>
       <button class="btn btn-primary" id="btnSaveData">Salvar alterações</button>
     </div>

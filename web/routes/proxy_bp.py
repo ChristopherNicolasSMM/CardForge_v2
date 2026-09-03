@@ -1,7 +1,7 @@
 """Tela de Proxy: monta folha de impressão (A4/A3/Letter) com marcas de corte e verso."""
 from __future__ import annotations
 
-import time
+from datetime import datetime
 from pathlib import Path
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -98,7 +98,8 @@ def run():
 
     proxy_dir = sd.output_dir() / "proxy"
     proxy_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{template_name}-proxy-{int(time.time())}.pdf"
+    stamp = datetime.now().strftime("%d%m%Y_%H%M%S")
+    filename = f"{template_name}-proxy-{stamp}.pdf"
     save_pdf(pages, proxy_dir / filename)
 
     flash(f"Folha de proxy gerada: {len(pages)} página(s).", "success")
@@ -116,3 +117,19 @@ def _list_proxies():
 def download(filename):
     proxy_dir = sd.output_dir() / "proxy"
     return send_from_directory(proxy_dir, filename, as_attachment=True)
+
+
+@bp.route("/delete/<path:filename>", methods=["POST"])
+def delete(filename):
+    proxy_dir = sd.output_dir() / "proxy"
+    target = proxy_dir / filename
+    try:
+        target.resolve().relative_to(proxy_dir.resolve())
+    except ValueError:
+        abort(404)
+    if target.exists() and target.is_file():
+        target.unlink()
+        flash(f"PDF “{filename}” excluído.", "success")
+    else:
+        flash("Arquivo não encontrado.", "error")
+    return redirect(url_for("proxy_bp.index"))

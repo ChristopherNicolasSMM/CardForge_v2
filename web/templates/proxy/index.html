@@ -70,7 +70,13 @@
           {% for p in proxies %}
           <tr>
             <td>{{ p }}</td>
-            <td><a class="btn btn-sm" href="{{ url_for('proxy_bp.download', filename=p) }}">⇩ Baixar PDF</a></td>
+            <td class="row gap-sm">
+              <a class="btn btn-sm" href="{{ url_for('proxy_bp.download', filename=p) }}">⇩ Baixar PDF</a>
+              <form method="post" action="{{ url_for('proxy_bp.delete', filename=p) }}"
+                    onsubmit="return confirm('Excluir “{{ p }}”? Isso não pode ser desfeito.')">
+                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+              </form>
+            </td>
           </tr>
           {% endfor %}
         </tbody>

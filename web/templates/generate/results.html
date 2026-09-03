@@ -10,6 +10,10 @@
     <div class="row gap-sm">
       <a class="btn" href="{{ url_for('generate_bp.index') }}">← Voltar</a>
       <a class="btn btn-primary" href="{{ url_for('generate_bp.zip_download', batch_id=meta.id) }}">⇩ Baixar tudo (.zip)</a>
+      <form method="post" action="{{ url_for('generate_bp.delete_batch', batch_id=meta.id) }}"
+            onsubmit="return confirm('Excluir este lote inteiro? Isso não pode ser desfeito.')">
+        <button type="submit" class="btn btn-danger">Excluir lote</button>
+      </form>
     </div>
   </div>
 
@@ -22,11 +26,15 @@
           <div style="aspect-ratio:63/88; display:flex; align-items:center; justify-content:center; color:var(--parchment-lo); font-size:.8rem;">sem preview</div>
         {% endif %}
         <div class="fname" title="{{ card.name }}">{{ card.name }}</div>
-        <div class="row" style="justify-content:center; gap:4px; padding-bottom:8px; flex-wrap:wrap;">
+        <div class="row" style="justify-content:center; gap:4px; padding-bottom:4px; flex-wrap:wrap;">
           {% for fmt, fname in card.files.items() %}
             <a class="badge" href="{{ url_for('generate_bp.file', batch_id=meta.id, fmt=fmt, filename=fname) }}" download>{{ fmt }}</a>
           {% endfor %}
         </div>
+        <form method="post" action="{{ url_for('generate_bp.delete_card', batch_id=meta.id, index=loop.index0) }}"
+              style="padding-bottom:8px;" onsubmit="return confirm('Excluir “{{ card.name }}” deste lote?')">
+          <button type="submit" class="btn btn-sm btn-danger" style="width:calc(100% - 16px); margin:0 8px;">Excluir card</button>
+        </form>
       </div>
     {% endfor %}
   </div>

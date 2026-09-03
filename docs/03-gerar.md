@@ -23,3 +23,10 @@ Para baixar tudo de uma vez, use **⇩ Baixar tudo (.zip)** — o arquivo compac
 ## Lotes anteriores
 
 A tela de Gerar mantém uma lista dos lotes já gerados na sessão atual, com acesso rápido ao resultado de cada um. Esse histórico é por sessão de navegador — fechar o navegador ou limpar cookies reinicia essa lista (os arquivos gerados continuam no disco em `collections/<coleção>/output/`, e podem ser encontrados manualmente lá se necessário).
+
+## Excluindo lotes e cards
+
+- **Excluir lote** — na lista de lotes (tela de Gerar) ou na tela de resultado de um lote, remove a pasta inteira daquele lote do disco (todos os formatos, todos os cards).
+- **Excluir card** — dentro da tela de resultado de um lote, cada card tem seu próprio botão **Excluir card**, que remove só os arquivos daquele card específico (em todos os formatos gerados) e atualiza a contagem do lote — sem precisar refazer o lote inteiro.
+
+Nenhuma das duas ações pode ser desfeita pela interface.
