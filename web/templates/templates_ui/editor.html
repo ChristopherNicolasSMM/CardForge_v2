@@ -75,6 +75,11 @@
           <label>Texto fixo</label>
           <input type="text" id="p_static">
         </div>
+        <div class="field" id="p_fixedImageWrap" style="display:none">
+          <label>Imagem fixa (usada quando o campo do dataset está vazio)</label>
+          <input type="file" id="p_fixedImageUpload" accept=".png,.jpg,.jpeg,.webp">
+          <div class="help-text" id="p_fixedImageName" style="margin-bottom:0">nenhuma imagem definida</div>
+        </div>
         <div class="field-row">
           <div class="field"><label>X (mm)</label><input type="number" step="0.1" id="p_x"></div>
           <div class="field"><label>Y (mm)</label><input type="number" step="0.1" id="p_y"></div>
@@ -83,11 +88,35 @@
           <div class="field"><label>Largura (mm)</label><input type="number" step="0.1" id="p_w"></div>
           <div class="field"><label>Altura (mm)</label><input type="number" step="0.1" id="p_h"></div>
         </div>
+
+        <div class="field">
+          <label>Alinhar na carta</label>
+          <div class="align-grid">
+            <button type="button" class="btn btn-sm" id="alignLeft" title="Alinhar à esquerda">⯇|</button>
+            <button type="button" class="btn btn-sm" id="alignCenterH" title="Centralizar horizontalmente">|⯀|</button>
+            <button type="button" class="btn btn-sm" id="alignRight" title="Alinhar à direita">|⯈</button>
+            <button type="button" class="btn btn-sm" id="alignTop" title="Alinhar ao topo">⯅‾</button>
+            <button type="button" class="btn btn-sm" id="alignMiddleV" title="Centralizar verticalmente">‾⯀‾</button>
+            <button type="button" class="btn btn-sm" id="alignBottom" title="Alinhar à base">_⯆</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Ordem de empilhamento (o que fica na frente)</label>
+          <div class="row gap-sm">
+            <button type="button" class="btn btn-sm" id="orderBack" title="Enviar para trás">⇤ trás</button>
+            <button type="button" class="btn btn-sm" id="orderDown" title="Descer uma camada">↓</button>
+            <button type="button" class="btn btn-sm" id="orderUp" title="Subir uma camada">↑</button>
+            <button type="button" class="btn btn-sm" id="orderFront" title="Trazer para frente">frente ⇥</button>
+          </div>
+          <input type="number" id="p_z" style="margin-top:8px" title="Valor exato de z-index, se preferir ajustar na mão">
+        </div>
+
         <div class="field-row">
-          <div class="field"><label>Camada (z-index)</label><input type="number" id="p_z"></div>
           <div class="field"><label>Encaixe</label>
             <select id="p_fit"><option value="cover">cover</option><option value="contain">contain</option><option value="stretch">stretch</option></select>
           </div>
+          <div class="field"></div>
         </div>
         <label class="check"><input type="checkbox" id="p_visible"> Visível</label>
         <label class="check" style="margin-top:6px"><input type="checkbox" id="p_multiline"> Multilinha</label>
@@ -148,6 +177,7 @@
       background: "{{ url_for('templates_bp.upload_background', name=name) }}",
       backImage: "{{ url_for('templates_bp.upload_back_image', name=name) }}",
       font_upload: "{{ url_for('templates_bp.upload_font', name=name) }}",
+      layerImage: "{{ url_for('templates_bp.upload_layer_image', name=name) }}",
     };
   </script>
   <script src="{{ url_for('static', filename='js/editor.js') }}"></script>

@@ -219,8 +219,8 @@ class PreviewRenderer:
                           x, y, w, h, color: str) -> None:
         # Tenta imagem
         if layer.source_image:
-            bg_path = self.template_dir / layer.source_image
-            if bg_path.exists():
+            bg_path = self._resolve_asset_path(layer.source_image)
+            if bg_path:
                 try:
                     bg = _open_image(bg_path).convert("RGBA")
                     bg = _fit_image(bg, w, h, layer.fit)
@@ -248,22 +248,53 @@ class PreviewRenderer:
             ImageDraw.Draw(img).line([(x, y + row_idx), (x + w, y + row_idx)],
                                       fill=(r, g, b, 255))
 
+    def _resolve_asset_path(self, value: str) -> Optional[Path]:
+        """Procura um arquivo de imagem em todos os lugares onde ele pode
+        estar: dentro da pasta do template, na biblioteca de imagens da
+        coleção ativa (assets/library/, onde a tela de Dados salva os
+        uploads), e por fim no diretório de trabalho do processo."""
+        candidates = [self.template_dir / value]
+        # collections/<coleção>/templates/<nome> -> collections/<coleção>/assets/library
+        try:
+            collection_dir = self.template_dir.parent.parent
+            candidates.append(collection_dir / "assets" / "library" / value)
+        except Exception:
+            pass
+        candidates.append(Path(".") / value)
+        for p in candidates:
+            if p.exists():
+                return p
+        return None
+
     def _draw_image(self, img: Image.Image, layer: Layer, row: dict,
                     x, y, w, h) -> None:
-        art_path_str = self._get_value(layer, row)
-        if not art_path_str:
-            return
-        # Busca relativo ao template e ao diretório de dados
-        for base in (self.template_dir, Path(".")):
-            p = base / art_path_str
-            if p.exists():
+        # Imagem fixa: quando o campo do dataset está vazio, a camada usa uma
+        # imagem fixa (definida no editor) em vez de buscar um valor por card —
+        # útil pra ícones, selos ou marcas d'água iguais em todo card.
+        if layer.field in ("", "static"):
+            if not layer.source_image:
+                return
+            p = self._resolve_asset_path(layer.source_image)
+            if p:
                 try:
                     art = _open_image(p).convert("RGBA")
                     art = _fit_image(art, w, h, layer.fit)
                     img.paste(art, (x, y), art)
                 except Exception as e:
-                    print(f"[preview] art erro: {e}")
-                return
+                    print(f"[preview] imagem fixa erro: {e}")
+            return
+
+        art_path_str = self._get_value(layer, row)
+        if not art_path_str:
+            return
+        p = self._resolve_asset_path(art_path_str)
+        if p:
+            try:
+                art = _open_image(p).convert("RGBA")
+                art = _fit_image(art, w, h, layer.fit)
+                img.paste(art, (x, y), art)
+            except Exception as e:
+                print(f"[preview] art erro: {e}")
 
     def _draw_text(self, draw: ImageDraw.Draw, layer: Layer,
                    text: str, x, y, w, h) -> None:

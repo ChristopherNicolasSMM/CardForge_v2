@@ -228,7 +228,7 @@
     for (const layer of sortedLayers().reverse()) {
       const item = document.createElement("div");
       item.className = "layer-item" + (layer.id === selectedId ? " selected" : "");
-      item.innerHTML = `<span>${layer.label || layer.id}</span><span class="type-tag">${layer.type}</span>`;
+      item.innerHTML = `<span>${layer.label || layer.id}</span><span class="type-tag" title="z-index ${layer.z_index}">${layer.type} · ${layer.z_index}</span>`;
       item.onclick = () => selectLayer(layer.id);
       list.appendChild(item);
     }
@@ -268,6 +268,13 @@
     P("p_style").value = s.font_style || "normal";
     P("p_align").value = s.align || "left";
     P("p_color").value = toHex(s.color || "#111111");
+
+    // Imagem fixa: só faz sentido pra camadas de imagem/fundo
+    const isImageLike = layer.type === "image" || layer.type === "background";
+    P("p_fixedImageWrap").style.display = isImageLike ? "block" : "none";
+    P("p_fixedImageName").textContent = layer.source_image
+      ? `imagem atual: ${layer.source_image}`
+      : "nenhuma imagem definida";
   }
 
   function toHex(c) {
@@ -315,6 +322,76 @@
   bindProp("p_style", (l, el) => { l.style = l.style || {}; l.style.font_style = el.value; });
   bindProp("p_align", (l, el) => { l.style = l.style || {}; l.style.align = el.value; });
   bindProp("p_color", (l, el) => { l.style = l.style || {}; l.style.color = el.value; });
+
+  // ── Alinhamento ───────────────────────────────────────────────────────────
+
+  function alignLayer(mode) {
+    const layer = layerById(selectedId);
+    if (!layer) return;
+    const cw = T.card.width_mm, ch = T.card.height_mm;
+    if (mode === "left")       layer.x_mm = 0;
+    if (mode === "center-h")   layer.x_mm = +(cw / 2 - layer.width_mm / 2).toFixed(2);
+    if (mode === "right")      layer.x_mm = +(cw - layer.width_mm).toFixed(2);
+    if (mode === "top")        layer.y_mm = 0;
+    if (mode === "middle-v")   layer.y_mm = +(ch / 2 - layer.height_mm / 2).toFixed(2);
+    if (mode === "bottom")     layer.y_mm = +(ch - layer.height_mm).toFixed(2);
+    syncPropsFromLayer(layer);
+    render();
+  }
+  P("alignLeft").addEventListener("click", () => alignLayer("left"));
+  P("alignCenterH").addEventListener("click", () => alignLayer("center-h"));
+  P("alignRight").addEventListener("click", () => alignLayer("right"));
+  P("alignTop").addEventListener("click", () => alignLayer("top"));
+  P("alignMiddleV").addEventListener("click", () => alignLayer("middle-v"));
+  P("alignBottom").addEventListener("click", () => alignLayer("bottom"));
+
+  // ── Ordem de empilhamento (z-index) ─────────────────────────────────────
+
+  function orderLayer(mode) {
+    const layer = layerById(selectedId);
+    if (!layer) return;
+    const zs = T.layers.map(l => l.z_index);
+    const seq = sortedLayers(); // crescente por z_index
+    const idx = seq.findIndex(l => l.id === layer.id);
+
+    if (mode === "front") layer.z_index = Math.max(...zs) + 1;
+    if (mode === "back")  layer.z_index = Math.min(...zs) - 1;
+    if (mode === "up" && idx < seq.length - 1) {
+      const next = seq[idx + 1];
+      const tmp = layer.z_index; layer.z_index = next.z_index; next.z_index = tmp;
+    }
+    if (mode === "down" && idx > 0) {
+      const prev = seq[idx - 1];
+      const tmp = layer.z_index; layer.z_index = prev.z_index; prev.z_index = tmp;
+    }
+    syncPropsFromLayer(layer);
+    renderLayerList();
+    render();
+  }
+  P("orderFront").addEventListener("click", () => orderLayer("front"));
+  P("orderBack").addEventListener("click", () => orderLayer("back"));
+  P("orderUp").addEventListener("click", () => orderLayer("up"));
+  P("orderDown").addEventListener("click", () => orderLayer("down"));
+
+  // ── Imagem fixa (camadas de imagem/fundo sem campo do dataset) ──────────
+
+  P("p_fixedImageUpload").addEventListener("change", async evt => {
+    const file = evt.target.files[0];
+    const layer = layerById(selectedId);
+    if (!file || !layer) return;
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(URLS.layerImage, { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      layer.source_image = data.filename;
+      delete imageCache[URLS.asset + encodeURIComponent(data.filename)];
+      syncPropsFromLayer(layer);
+      render();
+      await saveTemplate(true);
+    } else {
+      alert(data.error || "Falha no upload");
+    }
+  });
 
   P("btnDeleteLayer").addEventListener("click", () => {
     if (!selectedId) return;

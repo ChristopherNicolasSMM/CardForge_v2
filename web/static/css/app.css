@@ -235,6 +235,8 @@ table.data-table tr:hover td { background: rgba(255,255,255,0.015); }
   padding: 0;
 }
 .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.align-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.align-grid .btn { padding: 6px 4px; font-size: .82rem; }
 .section-divider { border: 0; border-top: 1px solid var(--iron-line-lo); margin: 16px 0; }
 .help-text { font-size: .75rem; color: var(--parchment-lo); margin-top: -8px; margin-bottom: 14px; }
 

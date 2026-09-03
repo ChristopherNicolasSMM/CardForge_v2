@@ -232,6 +232,23 @@ def upload_back_image(name):
                      "url": url_for("templates_bp.asset", name=name, filename=filename)})
 
 
+@bp.route("/<path:name>/layer-image", methods=["POST"])
+def upload_layer_image(name):
+    """Envia uma imagem fixa pra uma camada específica (tipo imagem ou fundo) —
+    usada quando a camada não puxa do dataset (campo vazio) e sim mostra
+    sempre a mesma imagem (ícone, selo, marca d'água etc.)."""
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"ok": False, "error": "Nenhum arquivo enviado"}), 400
+    tdir = template_dir(name)
+    tdir.mkdir(parents=True, exist_ok=True)
+    tmp_path = tdir / file.filename
+    file.save(tmp_path)
+    filename = set_background(name, str(tmp_path))  # só copia o arquivo pra pasta do template
+    return jsonify({"ok": True, "filename": filename,
+                     "url": url_for("templates_bp.asset", name=name, filename=filename)})
+
+
 @bp.route("/<path:name>/fonts", methods=["POST"])
 def upload_font(name):
     file = request.files.get("file")

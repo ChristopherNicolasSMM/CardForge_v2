@@ -69,6 +69,21 @@ class SVGBuilder:
         self._font_css    = _font_css(resolve_font_dirs(self.template_dir))
         self._icon_cache: dict[str, str] = {}
 
+    def _resolve_asset_path(self, value: str) -> Optional[Path]:
+        """Mesma lógica de busca do PreviewRenderer — pasta do template,
+        biblioteca de imagens da coleção ativa, depois diretório de trabalho."""
+        candidates = [self.template_dir / value]
+        try:
+            collection_dir = self.template_dir.parent.parent
+            candidates.append(collection_dir / "assets" / "library" / value)
+        except Exception:
+            pass
+        candidates.append(Path(".") / value)
+        for p in candidates:
+            if p.exists():
+                return p
+        return None
+
     def build(self, row: dict, color_key: str = "colorless") -> str:
         """Retorna string SVG completo para o card."""
         dims  = self.template.dimensions
@@ -133,8 +148,8 @@ class SVGBuilder:
     def _add_background(self, svg, layer, x, y, w, h, color) -> None:
         # Tenta imagem
         if layer.source_image:
-            bg_path = self.template_dir / layer.source_image
-            if bg_path.exists() and bg_path.stat().st_size > 0:
+            bg_path = self._resolve_asset_path(layer.source_image)
+            if bg_path and bg_path.stat().st_size > 0:
                 b64  = _b64_file(bg_path)
                 mime = self._mime(bg_path)
                 ET.SubElement(svg, "image", {
@@ -156,22 +171,26 @@ class SVGBuilder:
         })
 
     def _add_image(self, svg, layer, row, x, y, w, h) -> None:
-        val = self._get_value(layer, row)
+        # Imagem fixa: campo vazio = usa layer.source_image em vez de buscar
+        # no dataset (mesma convenção do PreviewRenderer).
+        if layer.field in ("", "static"):
+            val = layer.source_image
+        else:
+            val = self._get_value(layer, row)
         if not val:
             return
-        for base in (self.template_dir, Path(".")):
-            p = Path(base) / val
-            if p.exists():
-                b64  = _b64_file(p)
-                mime = self._mime(p)
-                ET.SubElement(svg, "image", {
-                    "id": layer.id,
-                    "x": x, "y": y, "width": w, "height": h,
-                    "href": f"data:{mime};base64,{b64}",
-                    "preserveAspectRatio":
-                        "xMidYMid slice" if layer.fit == "cover" else "xMidYMid meet",
-                })
-                return
+        p = self._resolve_asset_path(val)
+        if p:
+            b64  = _b64_file(p)
+            mime = self._mime(p)
+            ET.SubElement(svg, "image", {
+                "id": layer.id,
+                "x": x, "y": y, "width": w, "height": h,
+                "href": f"data:{mime};base64,{b64}",
+                "preserveAspectRatio":
+                    "xMidYMid slice" if layer.fit == "cover" else "xMidYMid meet",
+            })
+            return
 
     def _add_text(self, svg, layer, text, x, y, w, h) -> None:
         s = layer.style
