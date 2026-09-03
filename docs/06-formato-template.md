@@ -4,7 +4,7 @@ Este é um manual técnico para quem quer editar um template diretamente no arqu
 
 ## Estrutura geral
 
-Cada template vive em `templates/<nome>/base.json`:
+Cada template vive em `collections/<coleção>/templates/<nome>/base.json` (dentro da pasta da [coleção](08-colecoes) à qual pertence):
 
 ```json
 {
@@ -45,6 +45,7 @@ Cada template vive em `templates/<nome>/base.json`:
   "z_index": 10,
   "visible": true,
   "multiline": false,
+  "locked": false,
   "fit": "cover",
   "source_image": "",
   "source_gradient": "",
@@ -65,13 +66,15 @@ Cada template vive em `templates/<nome>/base.json`:
 | Tipo | Descrição |
 |---|---|
 | `background` | Imagem de fundo ou gradiente (usa `gradients` quando não há `source_image`) |
-| `image` | Arte do card — o valor de `field` aponta para uma coluna do dataset com o caminho da imagem |
-| `text` | Texto dinâmico (via `field`) ou fixo (via `static_text`) |
+| `image` | Arte do card — dinâmica (via `field`, aponta pra coluna do dataset com o caminho da imagem) ou fixa (via `source_image`, quando `field` está vazio) |
+| `text` | Texto dinâmico (via `field`) ou fixo (via `static_text`, quando `field` está vazio) |
 | `mana` | Igual a `text`, semanticamente reservado para custo/símbolos |
 
 ### Campos importantes
 
-- **`field`** — nome da coluna do dataset. Se vazio (ou `"static"`), a camada usa `static_text` em vez de puxar do dataset.
+- **`field`** — nome da coluna do dataset. Se vazio (ou `"static"`), o comportamento depende do tipo: camadas `text`/`mana` usam `static_text`; camadas `image`/`background` usam `source_image` — ambos casos servem pra conteúdo que não muda entre cards (ex: um ícone fixo, um texto de rodapé fixo).
+- **`source_image`** — nome de um arquivo de imagem. Resolvido nessa ordem: pasta do próprio template → `assets/library/` da coleção ativa (onde a tela de Dados salva os uploads) → diretório de trabalho do processo.
+- **`locked`** — `true` trava a camada contra clique/arraste no editor visual (o clique no canvas atravessa ela). Não afeta a renderização de forma alguma — é só uma conveniência do editor.
 - **`condition`** — controla se a camada aparece: `""` (sempre), `"has_pt"` (só se `power` e `toughness` estiverem preenchidos) ou `"has_flavor"` (só se `flavor_text` estiver preenchido).
 - **`fit`** — só relevante para `background`/`image`: `cover` (preenche e corta o excesso), `contain` (encaixa sem cortar, pode sobrar espaço) ou `stretch` (distorce para caber exatamente).
 - **`line_height_pt`** — `0` significa automático (`font_size_pt × 1.35`).

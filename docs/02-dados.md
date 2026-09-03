@@ -31,6 +31,24 @@ Importar um arquivo (CSV/XLSX/YAML/JSON) também respeita isso: as colunas do da
 
 No editor de template, o campo **"Campo do dataset"** de cada camada (veja o manual de [Templates](01-templates)) sugere automaticamente, num autocomplete, os nomes de campo que já existem no dataset da coleção ativa — assim fica fácil conectar visualmente cada camada do card ao dado certo, mesmo com um esquema totalmente próprio.
 
+### Cuidado com vírgulas dentro de campos, ao importar CSV
+
+Se algum campo de texto livre (descrição, sabor, texto de regras) puder conter vírgula, **coloque esse campo entre aspas duplas** no seu `.csv` — senão a vírgula interna quebra a coluna em dois pedaços e desloca tudo que vem depois, silenciosamente, sem erro na importação.
+
+Errado (a vírgula dentro do texto quebra a coluna seguinte):
+```csv
+Rotulo,Informacoes
+Sangue de Druida,Uma cerveja de cor avermelhada, com aroma maltado.
+```
+
+Certo:
+```csv
+Rotulo,Informacoes
+Sangue de Druida,"Uma cerveja de cor avermelhada, com aroma maltado."
+```
+
+O repositório tem um exemplo completo e correto em `modelo_import/teste-rotulo.csv` — um dataset de rótulos de cerveja com campos 100% customizados (`Cervejaria`, `ABV`, `IBU`, `Harmon1`...), pronto pra importar e usar como referência. Se preferir não se preocupar com aspas, importe via `.xlsx` em vez de `.csv` — cada célula já é isolada naturalmente.
+
 ## Colunas padrão (ponto de partida sugerido, estilo MTG)
 
 | Coluna | Uso |

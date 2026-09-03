@@ -33,8 +33,9 @@ Não é um app fechado, não exige conta, não trava seu trabalho atrás de payw
 
 ## Por que usar
 
-- 🎨 **Editor visual de verdade** — arraste, redimensione e estilize camadas de texto, arte e fundo direto no navegador, sem editar JSON na mão.
+- 🎨 **Editor visual de verdade** — arraste, redimensione e estilize camadas de texto, arte e fundo direto no navegador, sem editar JSON na mão. Alinhamento, ordem de empilhamento, travar camada e mover com o teclado, pra organizar até layouts complexos com camadas sobrepostas.
 - 🗂️ **Coleções** — cada jogo (ou cada atualização/expansão de um jogo) vive isolado em sua própria pasta: templates, dados, fontes e cards gerados nunca se misturam entre projetos diferentes.
+- 🧬 **Campos de dados totalmente customizáveis** — os campos padrão (estilo MTG) são só sugestão; renomeie, remova ou comece do zero com o esquema do seu próprio jogo, sem nenhum campo forçado.
 - 📋 **Dados sem fricção** — importe uma planilha (CSV/XLSX/YAML/JSON) ou edite os cards direto numa tabela no navegador.
 - 🖨️ **Pronto pra jogar de verdade** — geração em lote (PNG/JPEG/WebP/SVG) e uma folha de proxy pra impressão (A4/A3/Letter) com marcas de corte e verso.
 - 📖 **Manual embutido** — um wiki em `/wiki`, dentro do próprio app, documentando cada tela.
@@ -115,6 +116,8 @@ E um manual completo, sempre à mão, dentro do próprio app:
 | Fontes | Fixas (Beleren/Mplantin) | Upload de `.ttf`, por template ou por coleção |
 | Geração em lote | Só local | Resultado em grade com download individual ou `.zip` |
 | Proxy de impressão | Sim (A4/A3/Letter + verso) | Mantido, com upload de verso pela interface |
+| Organização de camadas | Só arraste, z-index digitado à mão | Alinhamento (6 modos), ordem de empilhamento com botões, travar camada, mover com o teclado, Alt+clique pra camadas sobrepostas |
+| Esquema de dados | — (não existia versão web) | Campos totalmente customizáveis por coleção — os campos estilo MTG são só sugestão |
 | Documentação | Arquivos `.md` soltos no repositório | Wiki navegável dentro do próprio app (`/wiki`) |
 | Persistência | Arquivos no disco | Arquivos no disco, organizados por coleção (ainda sem banco de dados) |
 
@@ -185,6 +188,7 @@ Detalhes de cada etapa estão no manual embutido (`/wiki`), incluindo o formato 
 - **Sem banco de dados** — tudo é arquivo, organizado por coleção. Cada coleção é uma pasta que você pode copiar, arquivar ou versionar isoladamente.
 - **Geração síncrona** — a geração em lote roda na mesma requisição. Pra datasets muito grandes (várias centenas de cards), gere em lotes menores.
 - **Fontes**: ordem de busca é `templates/<nome>/fonts/` (da coleção ativa) → `collections/<coleção>/assets/fonts_custom/` → `assets/fonts/` (embutidas, globais).
+- **Imagens** (dinâmicas ou fixas numa camada): ordem de busca é pasta do template → `assets/library/` da coleção ativa → diretório de trabalho do processo.
 - **Migração automática**: projetos criados antes do sistema de coleções têm templates/assets migrados automaticamente pra uma coleção "Geral" na primeira execução após a atualização.
 
 ---

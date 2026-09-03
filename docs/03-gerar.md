@@ -22,4 +22,4 @@ Para baixar tudo de uma vez, use **⇩ Baixar tudo (.zip)** — o arquivo compac
 
 ## Lotes anteriores
 
-A tela de Gerar mantém uma lista dos lotes já gerados na sessão atual, com acesso rápido ao resultado de cada um. Esse histórico é por sessão de navegador — fechar o navegador ou limpar cookies reinicia essa lista (os arquivos gerados continuam no disco em `instance/`, mas o link direto seria perdido).
+A tela de Gerar mantém uma lista dos lotes já gerados na sessão atual, com acesso rápido ao resultado de cada um. Esse histórico é por sessão de navegador — fechar o navegador ou limpar cookies reinicia essa lista (os arquivos gerados continuam no disco em `collections/<coleção>/output/`, e podem ser encontrados manualmente lá se necessário).

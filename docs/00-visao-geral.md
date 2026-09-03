@@ -17,7 +17,7 @@ CardForge é um motor de criação de cards para jogos de carta customizados. Vo
 
 **Dado** é uma linha da sua planilha ou tabela: os valores reais que entram em cada camada de texto/imagem. Um dataset com 30 linhas gera 30 cards.
 
-**Campo** conecta uma camada a uma coluna do dataset. Por exemplo, uma camada de texto com campo `name` mostra o valor da coluna `name` daquela linha. Se o campo ficar vazio, a camada usa um **texto fixo** em vez de puxar do dataset — útil para textos que não mudam entre cards.
+**Campo** conecta uma camada a uma coluna do dataset. Por exemplo, uma camada de texto com campo `name` mostra o valor da coluna `name` daquela linha. Se o campo ficar vazio, a camada usa conteúdo fixo em vez de puxar do dataset — **texto fixo** pra camadas de texto, **imagem fixa** pra camadas de imagem/fundo — útil pra conteúdo que não muda entre cards (um rodapé, um ícone, uma marca d'água).
 
 ## Coleções
 
