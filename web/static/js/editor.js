@@ -23,9 +23,10 @@
   }
   canvas.height = Math.round(T.card.height_mm * PX_PER_MM);
 
-  let selectedId = null;
+  let selectedId = null;      // camada "âncora" (última clicada) — usada pra redimensionar e como referência
+  let selectedIds = new Set(); // conjunto completo da seleção (multi-seleção)
   let dragMode = null;      // 'move' | 'resize' | null
-  let dragStart = null;     // {mx, my, x_mm, y_mm, w_mm, h_mm}
+  let dragStart = null;     // {mx, my, positions:{id:{x_mm,y_mm}}, w_mm, h_mm}
 
   const imageCache = {};    // url -> HTMLImageElement
   const loadedFonts = new Set();
@@ -80,6 +81,10 @@
 
   function layerById(id) { return T.layers.find(l => l.id === id); }
 
+  function getSelectedLayers() {
+    return T.layers.filter(l => selectedIds.has(l.id));
+  }
+
   function getImage(url) {
     if (imageCache[url]) return imageCache[url];
     const img = new Image();
@@ -112,7 +117,10 @@
       drawLayer(layer);
     }
 
-    if (selectedId) drawSelection(layerById(selectedId));
+    for (const id of selectedIds) {
+      const l = layerById(id);
+      if (l) drawSelection(l, selectedIds.size === 1);
+    }
   }
 
   function drawLayer(layer) {
@@ -212,7 +220,7 @@
     ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
   }
 
-  function drawSelection(layer) {
+  function drawSelection(layer, showHandle) {
     if (!layer) return;
     const x = px(layer.x_mm), y = px(layer.y_mm), w = px(layer.width_mm), h = px(layer.height_mm);
     ctx.strokeStyle = layer.locked ? "#8a8a8a" : "#DE6A30";
@@ -220,10 +228,10 @@
     ctx.setLineDash(layer.locked ? [5, 4] : []);
     ctx.strokeRect(x, y, w, h);
     ctx.setLineDash([]);
-    if (!layer.locked) {
+    if (!layer.locked && showHandle) {
       ctx.fillStyle = "#DE6A30";
       ctx.fillRect(x + w - 8, y + h - 8, 8, 8);
-    } else {
+    } else if (layer.locked) {
       ctx.font = "12px sans-serif";
       ctx.fillStyle = "#c9c9c9";
       ctx.textAlign = "left";
@@ -234,14 +242,15 @@
 
   // ── Interação: arrastar / redimensionar ─────────────────────────────────
   //
-  // Regras de clique (resolvem o problema de "clicar sempre pega a camada de
-  // cima, mesmo com outra já selecionada por baixo"):
-  //   1. Clique dentro da camada JÁ SELECIONADA (e destravada) sempre arrasta
-  //      ela, não importa se há outra camada por cima nesse ponto.
+  // Regras de clique:
+  //   1. Clique dentro de alguma camada JÁ SELECIONADA sempre arrasta o grupo
+  //      inteiro selecionado, não importa se há outra camada por cima nesse ponto.
   //   2. Alt+clique fura a pilha: cicla, a cada clique no mesmo ponto, pela
-  //      lista de camadas sobrepostas ali (da mais de cima pra mais de baixo).
-  //   3. Clique comum fora da selecionada: pega a camada do topo, como antes.
-  //   4. Camadas travadas (🔒) nunca são pegas por clique no canvas — só pela
+  //      lista de camadas sobrepostas ali (da mais de cima pra mais de baixo) —
+  //      sempre seleciona só uma (cancela multi-seleção).
+  //   3. Ctrl/Cmd+clique alterna a camada clicada na seleção (multi-seleção).
+  //   4. Clique comum fora da seleção: pega a camada do topo, seleciona só ela.
+  //   5. Camadas travadas (🔒) nunca são pegas por clique no canvas — só pela
   //      lista de camadas à esquerda.
 
   function mousePos(evt) {
@@ -269,14 +278,27 @@
     return Math.abs(mx - x) <= 10 && Math.abs(my - y) <= 10;
   }
 
+  function buildGroupDragStart(mx, my) {
+    const layers = getSelectedLayers().filter(l => !l.locked);
+    const positions = {};
+    layers.forEach(l => { positions[l.id] = { x_mm: l.x_mm, y_mm: l.y_mm }; });
+    const anchor = layerById(selectedId);
+    return {
+      mx, my, positions,
+      w_mm: anchor ? anchor.width_mm : 0,
+      h_mm: anchor ? anchor.height_mm : 0,
+    };
+  }
+
   let altCycle = null; // { mx, my, index }
 
   canvas.addEventListener("mousedown", evt => {
     const { mx, my } = mousePos(evt);
+    const additive = evt.ctrlKey || evt.metaKey;
     const selected = selectedId ? layerById(selectedId) : null;
 
-    // Alça de redimensionar tem prioridade máxima (só se destravada)
-    if (selected && nearHandle(selected, mx, my)) {
+    // Alça de redimensionar tem prioridade máxima (só com 1 camada selecionada, destravada)
+    if (selectedIds.size === 1 && selected && nearHandle(selected, mx, my)) {
       dragMode = "resize";
       dragStart = { mx, my, w_mm: selected.width_mm, h_mm: selected.height_mm };
       return;
@@ -292,47 +314,69 @@
       const target = candidates[idx];
       selectLayer(target.id);
       dragMode = "move";
-      dragStart = { mx, my, x_mm: target.x_mm, y_mm: target.y_mm };
+      dragStart = buildGroupDragStart(mx, my);
       return;
     }
     altCycle = null;
 
-    // Clique dentro da camada já selecionada: arrasta ela, mesmo se outra
-    // camada estiver visualmente por cima nesse ponto.
-    if (selected && !selected.locked) {
-      const x = px(selected.x_mm), y = px(selected.y_mm),
-            w = px(selected.width_mm), h = px(selected.height_mm);
-      if (mx >= x && mx <= x + w && my >= y && my <= y + h) {
+    // Ctrl/Cmd+clique: alterna a camada clicada dentro da seleção
+    if (additive) {
+      const hit = hitTest(mx, my);
+      if (hit) {
+        selectLayer(hit.id, { additive: true });
+        if (selectedIds.has(hit.id)) {
+          dragMode = "move";
+          dragStart = buildGroupDragStart(mx, my);
+        }
+      }
+      return;
+    }
+
+    // Clique dentro de alguma camada já selecionada: arrasta o grupo inteiro,
+    // mesmo se outra camada estiver visualmente por cima nesse ponto.
+    if (selectedIds.size > 0) {
+      const insideSelected = getSelectedLayers().some(l => {
+        if (l.locked) return false;
+        const x = px(l.x_mm), y = px(l.y_mm), w = px(l.width_mm), h = px(l.height_mm);
+        return mx >= x && mx <= x + w && my >= y && my <= y + h;
+      });
+      if (insideSelected) {
         dragMode = "move";
-        dragStart = { mx, my, x_mm: selected.x_mm, y_mm: selected.y_mm };
+        dragStart = buildGroupDragStart(mx, my);
         return;
       }
     }
 
-    // Clique comum: pega a camada do topo nesse ponto (ignora travadas)
+    // Clique comum: pega a camada do topo nesse ponto (ignora travadas), seleciona só ela
     const hit = hitTest(mx, my);
     selectLayer(hit ? hit.id : null);
     if (hit) {
       dragMode = "move";
-      dragStart = { mx, my, x_mm: hit.x_mm, y_mm: hit.y_mm };
+      dragStart = buildGroupDragStart(mx, my);
     }
   });
 
   canvas.addEventListener("mousemove", evt => {
     if (!dragMode) return;
     const { mx, my } = mousePos(evt);
-    const layer = layerById(selectedId);
-    if (!layer || layer.locked) return;
     const dxmm = mm(mx - dragStart.mx), dymm = mm(my - dragStart.my);
 
     if (dragMode === "move") {
-      layer.x_mm = Math.max(0, +(dragStart.x_mm + dxmm).toFixed(2));
-      layer.y_mm = Math.max(0, +(dragStart.y_mm + dymm).toFixed(2));
+      for (const [id, pos] of Object.entries(dragStart.positions)) {
+        const layer = layerById(id);
+        if (!layer || layer.locked) continue;
+        layer.x_mm = Math.max(0, +(pos.x_mm + dxmm).toFixed(2));
+        layer.y_mm = Math.max(0, +(pos.y_mm + dymm).toFixed(2));
+      }
     } else if (dragMode === "resize") {
+      const layer = layerById(selectedId);
+      if (!layer || layer.locked) return;
       layer.width_mm = Math.max(2, +(dragStart.w_mm + dxmm).toFixed(2));
       layer.height_mm = Math.max(2, +(dragStart.h_mm + dymm).toFixed(2));
     }
-    syncPropsFromLayer(layer);
+    const sel = getSelectedLayers();
+    if (sel.length === 1) syncPropsFromLayer(sel[0]);
+    else if (sel.length > 1) syncPropsFromLayers(sel);
     render();
   });
 
@@ -341,23 +385,29 @@
     dragMode = null;
   });
 
-  // ── Mover camada selecionada com as setas do teclado (precisão) ─────────
+  // ── Mover camada(s) selecionada(s) com as setas do teclado (precisão) ────
 
   window.addEventListener("keydown", evt => {
     const tag = (evt.target.tagName || "").toLowerCase();
     if (["input", "select", "textarea"].includes(tag)) return; // não atrapalha digitação
     if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(evt.key)) return;
 
-    const layer = selectedId ? layerById(selectedId) : null;
-    if (!layer || layer.locked) return;
+    const layers = getSelectedLayers().filter(l => !l.locked);
+    if (!layers.length) return;
 
     evt.preventDefault();
     const step = evt.shiftKey ? 2 : 0.5; // mm — Shift pra passo maior
-    if (evt.key === "ArrowLeft")  layer.x_mm = Math.max(0, +(layer.x_mm - step).toFixed(2));
-    if (evt.key === "ArrowRight") layer.x_mm = +(layer.x_mm + step).toFixed(2);
-    if (evt.key === "ArrowUp")    layer.y_mm = Math.max(0, +(layer.y_mm - step).toFixed(2));
-    if (evt.key === "ArrowDown")  layer.y_mm = +(layer.y_mm + step).toFixed(2);
-    syncPropsFromLayer(layer);
+    let dx = 0, dy = 0;
+    if (evt.key === "ArrowLeft")  dx = -step;
+    if (evt.key === "ArrowRight") dx = step;
+    if (evt.key === "ArrowUp")    dy = -step;
+    if (evt.key === "ArrowDown")  dy = step;
+    layers.forEach(l => {
+      l.x_mm = Math.max(0, +(l.x_mm + dx).toFixed(2));
+      l.y_mm = Math.max(0, +(l.y_mm + dy).toFixed(2));
+    });
+    if (layers.length === 1) syncPropsFromLayer(layers[0]);
+    else syncPropsFromLayers(getSelectedLayers());
     render();
     scheduleAutoSave();
   });
@@ -369,7 +419,7 @@
     list.innerHTML = "";
     for (const layer of sortedLayers().reverse()) {
       const item = document.createElement("div");
-      item.className = "layer-item" + (layer.id === selectedId ? " selected" : "") + (layer.locked ? " locked" : "");
+      item.className = "layer-item" + (selectedIds.has(layer.id) ? " selected" : "") + (layer.locked ? " locked" : "");
       item.innerHTML = `
         <span class="lock-toggle" title="${layer.locked ? 'Destravar (permitir clique/arraste no canvas)' : 'Travar (clique no canvas atravessa essa camada)'}">${layer.locked ? "🔒" : "🔓"}</span>
         <span class="layer-name">${layer.label || layer.id}</span>
@@ -382,18 +432,41 @@
         render();
         scheduleAutoSave();
       });
-      item.addEventListener("click", () => selectLayer(layer.id));
+      item.addEventListener("click", e => selectLayer(layer.id, { additive: e.ctrlKey || e.metaKey }));
       list.appendChild(item);
     }
   }
 
-  function selectLayer(id) {
-    selectedId = id;
+  function selectLayer(id, opts) {
+    opts = opts || {};
+    if (id === null) {
+      selectedIds.clear();
+      selectedId = null;
+    } else if (opts.additive) {
+      if (selectedIds.has(id)) {
+        selectedIds.delete(id);
+        selectedId = selectedIds.size ? [...selectedIds][selectedIds.size - 1] : null;
+      } else {
+        selectedIds.add(id);
+        selectedId = id;
+      }
+    } else {
+      selectedIds = new Set([id]);
+      selectedId = id;
+    }
+
     renderLayerList();
-    const layer = id ? layerById(id) : null;
-    document.getElementById("propsForm").style.display = layer ? "block" : "none";
-    document.getElementById("propsEmpty").style.display = layer ? "none" : "block";
-    if (layer) syncPropsFromLayer(layer);
+    const layers = getSelectedLayers();
+    const multi = layers.length > 1;
+    document.getElementById("propsForm").style.display = layers.length ? "block" : "none";
+    document.getElementById("propsEmpty").style.display = layers.length ? "none" : "block";
+    const multiBanner = document.getElementById("propsMulti");
+    if (multiBanner) {
+      multiBanner.style.display = multi ? "block" : "none";
+      if (multi) multiBanner.textContent = `${layers.length} camadas selecionadas — as alterações abaixo aplicam a todas.`;
+    }
+    if (layers.length === 1) syncPropsFromLayer(layers[0]);
+    else if (multi) syncPropsFromLayers(layers);
     render();
   }
 
@@ -411,9 +484,9 @@
     P("p_h").value = layer.height_mm;
     P("p_z").value = layer.z_index;
     P("p_fit").value = layer.fit || "cover";
-    P("p_visible").checked = !!layer.visible;
-    P("p_multiline").checked = !!layer.multiline;
-    P("p_locked").checked = !!layer.locked;
+    P("p_visible").indeterminate = false; P("p_visible").checked = !!layer.visible;
+    P("p_multiline").indeterminate = false; P("p_multiline").checked = !!layer.multiline;
+    P("p_locked").indeterminate = false; P("p_locked").checked = !!layer.locked;
     const s = layer.style || {};
     P("p_font").value = s.font_family || "";
     P("p_size").value = s.font_size_pt || 9;
@@ -433,6 +506,61 @@
       : "nenhuma imagem definida";
   }
 
+  // Preenche o painel de propriedades quando várias camadas estão selecionadas:
+  // campos com o mesmo valor em todas mostram esse valor; campos divergentes
+  // ficam em branco/indeterminado (padrão "misto" do Figma/Illustrator) — editar
+  // qualquer campo aplica o novo valor a todas as camadas selecionadas de uma vez.
+  function commonValue(layers, getter) {
+    const vals = layers.map(getter);
+    return vals.every(v => v === vals[0]) ? vals[0] : null;
+  }
+
+  function setMixedText(el, value) {
+    el.value = value === null ? "" : value;
+    el.placeholder = value === null ? "(valores diferentes)" : "";
+  }
+
+  function setMixedCheck(el, value) {
+    if (value === null) { el.indeterminate = true; }
+    else { el.indeterminate = false; el.checked = !!value; }
+  }
+
+  function syncPropsFromLayers(layers) {
+    setMixedText(P("p_label"), commonValue(layers, l => l.label || ""));
+    setMixedText(P("p_field"), commonValue(layers, l => l.field || ""));
+    setMixedText(P("p_static"), commonValue(layers, l => l.static_text || ""));
+    setMixedText(P("p_x"), commonValue(layers, l => l.x_mm));
+    setMixedText(P("p_y"), commonValue(layers, l => l.y_mm));
+    setMixedText(P("p_w"), commonValue(layers, l => l.width_mm));
+    setMixedText(P("p_h"), commonValue(layers, l => l.height_mm));
+    setMixedText(P("p_z"), commonValue(layers, l => l.z_index));
+    const fitCommon = commonValue(layers, l => l.fit || "cover");
+    P("p_fit").value = fitCommon || "cover";
+    setMixedCheck(P("p_visible"), commonValue(layers, l => !!l.visible));
+    setMixedCheck(P("p_multiline"), commonValue(layers, l => !!l.multiline));
+    setMixedCheck(P("p_locked"), commonValue(layers, l => !!l.locked));
+
+    const fontCommon = commonValue(layers, l => (l.style || {}).font_family || "");
+    P("p_font").value = fontCommon || (layers[0].style || {}).font_family || "";
+    setMixedText(P("p_size"), commonValue(layers, l => (l.style || {}).font_size_pt ?? 9));
+    setMixedText(P("p_lh"), commonValue(layers, l => (l.style || {}).line_height_pt ?? 0));
+    const weightCommon = commonValue(layers, l => (l.style || {}).font_weight || "normal");
+    P("p_weight").value = weightCommon || "normal";
+    const styleCommon = commonValue(layers, l => (l.style || {}).font_style || "normal");
+    P("p_style").value = styleCommon || "normal";
+    const alignCommon = commonValue(layers, l => (l.style || {}).align || "left");
+    P("p_align").value = alignCommon || "left";
+    const valignCommon = commonValue(layers, l => (l.style || {}).vertical_align || "top");
+    P("p_valign").value = valignCommon || "top";
+    setMixedText(P("p_letterspacing"), commonValue(layers, l => (l.style || {}).letter_spacing_pt ?? 0));
+    const colorCommon = commonValue(layers, l => toHex((l.style || {}).color || "#111111"));
+    P("p_color").value = colorCommon || toHex((layers[0].style || {}).color || "#111111");
+
+    const anyImageLike = layers.some(l => l.type === "image" || l.type === "background");
+    P("p_fixedImageWrap").style.display = anyImageLike ? "block" : "none";
+    P("p_fixedImageName").textContent = `${layers.length} camadas selecionadas`;
+  }
+
   function toHex(c) {
     if (/^#[0-9a-f]{6}$/i.test(c)) return c;
     return "#111111";
@@ -440,9 +568,9 @@
 
   function bindProp(id, apply) {
     P(id).addEventListener("input", () => {
-      const layer = layerById(selectedId);
-      if (!layer) return;
-      apply(layer, P(id));
+      const layers = getSelectedLayers();
+      if (!layers.length) return;
+      layers.forEach(l => apply(l, P(id)));
       renderLayerList();
       render();
       scheduleAutoSave();
@@ -486,16 +614,19 @@
   // ── Alinhamento ───────────────────────────────────────────────────────────
 
   function alignLayer(mode) {
-    const layer = layerById(selectedId);
-    if (!layer) return;
+    const layers = getSelectedLayers().filter(l => !l.locked);
+    if (!layers.length) return;
     const cw = T.card.width_mm, ch = T.card.height_mm;
-    if (mode === "left")       layer.x_mm = 0;
-    if (mode === "center-h")   layer.x_mm = +(cw / 2 - layer.width_mm / 2).toFixed(2);
-    if (mode === "right")      layer.x_mm = +(cw - layer.width_mm).toFixed(2);
-    if (mode === "top")        layer.y_mm = 0;
-    if (mode === "middle-v")   layer.y_mm = +(ch / 2 - layer.height_mm / 2).toFixed(2);
-    if (mode === "bottom")     layer.y_mm = +(ch - layer.height_mm).toFixed(2);
-    syncPropsFromLayer(layer);
+    layers.forEach(layer => {
+      if (mode === "left")       layer.x_mm = 0;
+      if (mode === "center-h")   layer.x_mm = +(cw / 2 - layer.width_mm / 2).toFixed(2);
+      if (mode === "right")      layer.x_mm = +(cw - layer.width_mm).toFixed(2);
+      if (mode === "top")        layer.y_mm = 0;
+      if (mode === "middle-v")   layer.y_mm = +(ch / 2 - layer.height_mm / 2).toFixed(2);
+      if (mode === "bottom")     layer.y_mm = +(ch - layer.height_mm).toFixed(2);
+    });
+    if (layers.length === 1) syncPropsFromLayer(layers[0]);
+    else syncPropsFromLayers(getSelectedLayers());
     render();
     scheduleAutoSave();
   }
@@ -507,25 +638,41 @@
   P("alignBottom").addEventListener("click", () => alignLayer("bottom"));
 
   // ── Ordem de empilhamento (z-index) ─────────────────────────────────────
+  //
+  // "Frente"/"trás" funcionam com o grupo inteiro selecionado, preservando a
+  // ordem relativa entre elas. "Subir"/"descer" (trocar com a vizinha) só
+  // fazem sentido pra uma camada por vez, então usam sempre a âncora.
 
   function orderLayer(mode) {
-    const layer = layerById(selectedId);
-    if (!layer) return;
+    const layers = getSelectedLayers();
+    if (!layers.length) return;
     const zs = T.layers.map(l => l.z_index);
-    const seq = sortedLayers(); // crescente por z_index
-    const idx = seq.findIndex(l => l.id === layer.id);
 
-    if (mode === "front") layer.z_index = Math.max(...zs) + 1;
-    if (mode === "back")  layer.z_index = Math.min(...zs) - 1;
-    if (mode === "up" && idx < seq.length - 1) {
-      const next = seq[idx + 1];
-      const tmp = layer.z_index; layer.z_index = next.z_index; next.z_index = tmp;
+    if (mode === "front") {
+      const maxZ = Math.max(...zs);
+      const ordered = [...layers].sort((a, b) => a.z_index - b.z_index);
+      ordered.forEach((l, i) => { l.z_index = maxZ + 1 + i; });
+    } else if (mode === "back") {
+      const minZ = Math.min(...zs);
+      const ordered = [...layers].sort((a, b) => a.z_index - b.z_index);
+      ordered.forEach((l, i) => { l.z_index = minZ - ordered.length + i; });
+    } else {
+      const layer = layerById(selectedId);
+      if (!layer) return;
+      const seq = sortedLayers();
+      const idx = seq.findIndex(l => l.id === layer.id);
+      if (mode === "up" && idx < seq.length - 1) {
+        const next = seq[idx + 1];
+        const tmp = layer.z_index; layer.z_index = next.z_index; next.z_index = tmp;
+      }
+      if (mode === "down" && idx > 0) {
+        const prev = seq[idx - 1];
+        const tmp = layer.z_index; layer.z_index = prev.z_index; prev.z_index = tmp;
+      }
     }
-    if (mode === "down" && idx > 0) {
-      const prev = seq[idx - 1];
-      const tmp = layer.z_index; layer.z_index = prev.z_index; prev.z_index = tmp;
-    }
-    syncPropsFromLayer(layer);
+    const sel = getSelectedLayers();
+    if (sel.length === 1) syncPropsFromLayer(sel[0]);
+    else syncPropsFromLayers(sel);
     renderLayerList();
     render();
     scheduleAutoSave();
@@ -539,15 +686,16 @@
 
   P("p_fixedImageUpload").addEventListener("change", async evt => {
     const file = evt.target.files[0];
-    const layer = layerById(selectedId);
-    if (!file || !layer) return;
+    const layers = getSelectedLayers().filter(l => l.type === "image" || l.type === "background");
+    if (!file || !layers.length) return;
     const fd = new FormData(); fd.append("file", file);
     const res = await fetch(URLS.layerImage, { method: "POST", body: fd });
     const data = await res.json();
     if (data.ok) {
-      layer.source_image = data.filename;
+      layers.forEach(l => { l.source_image = data.filename; });
       delete imageCache[URLS.asset + encodeURIComponent(data.filename)];
-      syncPropsFromLayer(layer);
+      if (layers.length === 1) syncPropsFromLayer(layers[0]);
+      else syncPropsFromLayers(getSelectedLayers());
       render();
       await saveTemplate(true);
     } else {
@@ -556,9 +704,12 @@
   });
 
   P("btnDeleteLayer").addEventListener("click", () => {
-    if (!selectedId) return;
-    if (!confirm("Excluir esta camada?")) return;
-    T.layers = T.layers.filter(l => l.id !== selectedId);
+    const layers = getSelectedLayers();
+    if (!layers.length) return;
+    const msg = layers.length > 1 ? `Excluir ${layers.length} camadas selecionadas?` : "Excluir esta camada?";
+    if (!confirm(msg)) return;
+    const idsToDelete = new Set(layers.map(l => l.id));
+    T.layers = T.layers.filter(l => !idsToDelete.has(l.id));
     selectLayer(null);
     scheduleAutoSave();
   });
@@ -587,6 +738,22 @@
 
   // ── Uploads ──────────────────────────────────────────────────────────────
 
+  function updateAssetStatus() {
+    const bgLayer = T.layers.find(l => l.type === "background");
+    const bgFile = bgLayer && bgLayer.source_image;
+    const bgEl = document.getElementById("bgStatus");
+    if (bgEl) {
+      bgEl.classList.toggle("set", !!bgFile);
+      bgEl.querySelector(".status-text").textContent = bgFile || "nenhuma imagem definida";
+    }
+    const backFile = T.back_image;
+    const backEl = document.getElementById("backStatus");
+    if (backEl) {
+      backEl.classList.toggle("set", !!backFile);
+      backEl.querySelector(".status-text").textContent = backFile || "nenhuma imagem definida";
+    }
+  }
+
   function findOrCreateBackgroundLayer() {
     let bg = T.layers.find(l => l.type === "background");
     if (!bg) {
@@ -609,6 +776,7 @@
       const bg = findOrCreateBackgroundLayer();
       bg.source_image = data.filename;
       delete imageCache[URLS.asset + encodeURIComponent(data.filename)];
+      updateAssetStatus();
       render();
       await saveTemplate(true);
     } else {
@@ -624,7 +792,7 @@
     const data = await res.json();
     if (data.ok) {
       T.back_image = data.filename;
-      alert("Imagem de verso definida.");
+      updateAssetStatus();
     } else {
       alert(data.error || "Falha no upload");
     }
@@ -731,5 +899,6 @@
   // ── Boot ─────────────────────────────────────────────────────────────────
 
   renderLayerList();
+  updateAssetStatus();
   render();
 })();

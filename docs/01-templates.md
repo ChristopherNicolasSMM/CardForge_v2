@@ -39,6 +39,22 @@ Clique no ícone 🔓 ao lado do nome de uma camada, na lista à esquerda, pra t
 
 É útil pra proteger uma camada grande (como o fundo) de atrapalhar cliques nas camadas menores por cima dela. Também dá pra travar/destravar pelo checkbox **Bloqueada** no painel de propriedades.
 
+### Selecionando várias camadas ao mesmo tempo
+
+Segure **Ctrl** (ou **Cmd** no Mac) e clique numa camada — na lista à esquerda ou no próprio canvas — pra adicioná-la à seleção sem perder a(s) que já estavam selecionadas. Clicar de novo numa camada já selecionada (ainda segurando Ctrl/Cmd) a remove da seleção.
+
+Com várias camadas selecionadas:
+
+- **Arrastar** qualquer uma delas no canvas move o grupo inteiro junto, mantendo a posição relativa entre elas.
+- **Setas do teclado** deslocam todas as selecionadas ao mesmo tempo.
+- O painel de propriedades mostra um aviso ("N camadas selecionadas") e passa a **aplicar qualquer alteração a todas de uma vez** — mude a fonte, o alinhamento, a cor, o que for, e todas as camadas selecionadas recebem o novo valor.
+- Quando um campo tem valores **diferentes** entre as camadas selecionadas, ele aparece em branco (com a dica "valores diferentes") em vez de mostrar um valor de uma camada só, arbitrariamente — assim que você digita algo nele, esse valor passa a valer pra todas.
+- **Alinhar na carta** alinha cada camada selecionada à borda da carta, independentemente — não umas em relação às outras.
+- **Trazer para frente / enviar para trás** aplica ao grupo inteiro, preservando a ordem relativa entre as camadas selecionadas. **Subir uma camada / descer uma camada** (troca com a vizinha) continua valendo só pra última camada clicada, já que não faz sentido bem definido pra um grupo.
+- **Excluir camada** exclui todas as selecionadas de uma vez (com confirmação mostrando quantas).
+
+Clicar numa camada **sem** segurar Ctrl/Cmd sempre volta a selecionar só ela, limpando a seleção anterior.
+
 ### Alinhando camadas
 
 No painel de propriedades, a seção **Alinhar na carta** tem seis botões que posicionam a camada selecionada relativa às bordas do card: esquerda, centro horizontal, direita, topo, centro vertical, base. É a forma rápida de deixar várias camadas alinhadas entre si (ex: encostar duas camadas na mesma margem esquerda) sem precisar acertar o `X`/`Y` manualmente.
@@ -86,6 +102,8 @@ Escolha o tipo (**texto**, **imagem**, **fundo** ou **custo/ícone**) no seletor
 
 - **Imagem de fundo** — a arte de moldura do card. Fica atrás de todas as outras camadas.
 - **Imagem de verso** — usada apenas na folha de [proxy de impressão](04-proxy), como o verso comum de todos os cards desse template.
+
+Abaixo de cada campo, uma bolinha indica se já existe uma imagem definida: 🟢 verde com o nome do arquivo quando tem, 🔴 vermelha com "nenhuma imagem definida" quando não tem. Esse indicador reflete o que está realmente salvo no template — diferente do campo de arquivo em si, que o navegador sempre mostra como "nenhum arquivo escolhido" depois de recarregar a página, mesmo com uma imagem já definida.
 
 Esses dois campos, no painel esquerdo, são atalhos pra situações específicas (o fundo principal e o verso de impressão). Para qualquer **outra** camada de imagem ou fundo com conteúdo fixo — um ícone de canto, um selo de edição, uma marca d'água — use o campo **Imagem fixa** nas propriedades daquela camada (veja a tabela acima), deixando o **Campo do dataset** vazio.
 

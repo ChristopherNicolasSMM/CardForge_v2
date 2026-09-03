@@ -34,10 +34,12 @@
         <div class="field">
           <label>Imagem de fundo</label>
           <input type="file" id="bgUpload" accept=".png,.jpg,.jpeg,.webp">
+          <div class="asset-status" id="bgStatus"><span class="status-dot"></span><span class="status-text"></span></div>
         </div>
         <div class="field" style="margin-bottom:0">
           <label>Imagem de verso (proxy de impressão)</label>
           <input type="file" id="backUpload" accept=".png,.jpg,.jpeg,.webp">
+          <div class="asset-status" id="backStatus"><span class="status-dot"></span><span class="status-text"></span></div>
         </div>
       </div>
 
@@ -67,7 +69,8 @@
     <!-- Painel direito: propriedades -->
     <div class="panel props-panel" id="propsPanel">
       <div class="panel-title">propriedades</div>
-      <div id="propsEmpty" class="help-text" style="margin:0">Selecione uma camada no canvas ou na lista à esquerda.</div>
+      <div id="propsEmpty" class="help-text" style="margin:0">Selecione uma camada no canvas ou na lista à esquerda. Segure Ctrl/Cmd e clique pra selecionar várias.</div>
+      <div id="propsMulti" class="multi-banner" style="display:none"></div>
       <form id="propsForm" style="display:none">
 
         <details class="prop-group" open>

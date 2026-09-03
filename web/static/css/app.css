@@ -264,6 +264,12 @@ table.data-table tr:hover td { background: rgba(255,255,255,0.015); }
 .save-status.saving { color: var(--temper-hi); }
 .save-status.saved { color: var(--ok); }
 
+.multi-banner {
+  font-size: .78rem; color: var(--parchment); background: rgba(78,124,140,0.12);
+  border: 1px solid var(--temper-blue); border-radius: var(--radius-sm);
+  padding: 8px 10px; margin-bottom: 14px;
+}
+
 .layer-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; max-height: 220px; overflow-y: auto; }
 .layer-item {
   display: flex; align-items: center; gap: 7px;
@@ -290,6 +296,18 @@ table.data-table tr:hover td { background: rgba(255,255,255,0.015); }
 .align-grid .btn { padding: 6px 4px; font-size: .82rem; }
 .section-divider { border: 0; border-top: 1px solid var(--iron-line-lo); margin: 16px 0; }
 .help-text { font-size: .75rem; color: var(--parchment-lo); margin-top: -8px; margin-bottom: 14px; }
+.asset-status {
+  display: flex; align-items: center; gap: 6px; margin-top: 7px;
+  font-size: .74rem; color: var(--parchment-lo); font-family: var(--font-mono);
+}
+.asset-status .status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--danger); box-shadow: 0 0 0 2px rgba(184,74,62,0.18);
+}
+.asset-status.set .status-dot {
+  background: var(--ok); box-shadow: 0 0 0 2px rgba(110,156,92,0.18);
+}
+.asset-status .status-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Resultados de geração ───────────────────────────────────────────────── */
 .result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
