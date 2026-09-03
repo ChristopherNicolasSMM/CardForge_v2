@@ -8,6 +8,7 @@
       <p>Arraste as camadas no canvas pra reposicionar (a selecionada tem prioridade, mesmo com outra por cima). Use a alça no canto inferior direito pra redimensionar, as setas do teclado pra ajuste fino, <strong>Alt+clique</strong> pra alcançar uma camada escondida embaixo de outra, o 🔒 na lista pra travar uma camada contra cliques, e os controles de zoom (ou <strong>Ctrl+roda do mouse</strong>) pra ajustar com mais precisão.</p>
     </div>
     <div class="row gap-sm">
+      <span id="saveStatus" class="save-status"></span>
       <button class="btn" id="btnRealPreview">◎ Ver renderização real</button>
       <button class="btn btn-primary" id="btnSave">Salvar template</button>
     </div>
@@ -64,101 +65,122 @@
     </div>
 
     <!-- Painel direito: propriedades -->
-    <div class="panel" id="propsPanel">
+    <div class="panel props-panel" id="propsPanel">
       <div class="panel-title">propriedades</div>
       <div id="propsEmpty" class="help-text" style="margin:0">Selecione uma camada no canvas ou na lista à esquerda.</div>
       <form id="propsForm" style="display:none">
-        <div class="field">
-          <label>Rótulo</label>
-          <input type="text" id="p_label">
-        </div>
-        <div class="field">
-          <label>Campo do dataset (vazio = texto fixo)</label>
-          <input type="text" id="p_field" list="datasetFieldsList" placeholder="ex: name, mana_cost...">
-          <datalist id="datasetFieldsList">
-            {% for col in dataset_columns %}<option value="{{ col }}">{% endfor %}
-          </datalist>
-        </div>
-        <div class="field" id="p_staticWrap">
-          <label>Texto fixo</label>
-          <input type="text" id="p_static">
-        </div>
-        <div class="field" id="p_fixedImageWrap" style="display:none">
-          <label>Imagem fixa (usada quando o campo do dataset está vazio)</label>
-          <input type="file" id="p_fixedImageUpload" accept=".png,.jpg,.jpeg,.webp">
-          <div class="help-text" id="p_fixedImageName" style="margin-bottom:0">nenhuma imagem definida</div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>X (mm)</label><input type="number" step="0.1" id="p_x"></div>
-          <div class="field"><label>Y (mm)</label><input type="number" step="0.1" id="p_y"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Largura (mm)</label><input type="number" step="0.1" id="p_w"></div>
-          <div class="field"><label>Altura (mm)</label><input type="number" step="0.1" id="p_h"></div>
-        </div>
 
-        <div class="field">
-          <label>Alinhar na carta</label>
-          <div class="align-grid">
-            <button type="button" class="btn btn-sm" id="alignLeft" title="Alinhar à esquerda">⯇|</button>
-            <button type="button" class="btn btn-sm" id="alignCenterH" title="Centralizar horizontalmente">|⯀|</button>
-            <button type="button" class="btn btn-sm" id="alignRight" title="Alinhar à direita">|⯈</button>
-            <button type="button" class="btn btn-sm" id="alignTop" title="Alinhar ao topo">⯅‾</button>
-            <button type="button" class="btn btn-sm" id="alignMiddleV" title="Centralizar verticalmente">‾⯀‾</button>
-            <button type="button" class="btn btn-sm" id="alignBottom" title="Alinhar à base">_⯆</button>
+        <details class="prop-group" open>
+          <summary>Conteúdo</summary>
+          <div class="prop-group-body">
+            <div class="field">
+              <label>Rótulo</label>
+              <input type="text" id="p_label">
+            </div>
+            <div class="field">
+              <label>Campo do dataset (vazio = texto fixo)</label>
+              <input type="text" id="p_field" list="datasetFieldsList" placeholder="ex: name, mana_cost...">
+              <datalist id="datasetFieldsList">
+                {% for col in dataset_columns %}<option value="{{ col }}">{% endfor %}
+              </datalist>
+            </div>
+            <div class="field" id="p_staticWrap">
+              <label>Texto fixo</label>
+              <input type="text" id="p_static">
+            </div>
+            <div class="field" id="p_fixedImageWrap" style="display:none">
+              <label>Imagem fixa (usada quando o campo do dataset está vazio)</label>
+              <input type="file" id="p_fixedImageUpload" accept=".png,.jpg,.jpeg,.webp">
+              <div class="help-text" id="p_fixedImageName" style="margin-bottom:0">nenhuma imagem definida</div>
+            </div>
           </div>
-        </div>
+        </details>
 
-        <div class="field">
-          <label>Ordem de empilhamento (o que fica na frente)</label>
-          <div class="row gap-sm">
-            <button type="button" class="btn btn-sm" id="orderBack" title="Enviar para trás">⇤ trás</button>
-            <button type="button" class="btn btn-sm" id="orderDown" title="Descer uma camada">↓</button>
-            <button type="button" class="btn btn-sm" id="orderUp" title="Subir uma camada">↑</button>
-            <button type="button" class="btn btn-sm" id="orderFront" title="Trazer para frente">frente ⇥</button>
+        <details class="prop-group" open>
+          <summary>Posição e tamanho</summary>
+          <div class="prop-group-body">
+            <div class="field-row">
+              <div class="field"><label>X (mm)</label><input type="number" step="0.1" id="p_x"></div>
+              <div class="field"><label>Y (mm)</label><input type="number" step="0.1" id="p_y"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Largura (mm)</label><input type="number" step="0.1" id="p_w"></div>
+              <div class="field"><label>Altura (mm)</label><input type="number" step="0.1" id="p_h"></div>
+            </div>
+            <div class="field">
+              <label>Alinhar na carta</label>
+              <div class="align-grid">
+                <button type="button" class="btn btn-sm" id="alignLeft" title="Alinhar à esquerda">⯇|</button>
+                <button type="button" class="btn btn-sm" id="alignCenterH" title="Centralizar horizontalmente">|⯀|</button>
+                <button type="button" class="btn btn-sm" id="alignRight" title="Alinhar à direita">|⯈</button>
+                <button type="button" class="btn btn-sm" id="alignTop" title="Alinhar ao topo">⯅‾</button>
+                <button type="button" class="btn btn-sm" id="alignMiddleV" title="Centralizar verticalmente">‾⯀‾</button>
+                <button type="button" class="btn btn-sm" id="alignBottom" title="Alinhar à base">_⯆</button>
+              </div>
+            </div>
           </div>
-          <input type="number" id="p_z" style="margin-top:8px" title="Valor exato de z-index, se preferir ajustar na mão">
-        </div>
+        </details>
 
-        <div class="field-row">
-          <div class="field"><label>Encaixe</label>
-            <select id="p_fit"><option value="cover">cover</option><option value="contain">contain</option><option value="stretch">stretch</option></select>
-          </div>
-          <div class="field"></div>
-        </div>
-        <label class="check"><input type="checkbox" id="p_visible"> Visível</label>
-        <label class="check" style="margin-top:6px"><input type="checkbox" id="p_multiline"> Multilinha</label>
-        <label class="check" style="margin-top:6px"><input type="checkbox" id="p_locked"> Bloqueada (clique no canvas atravessa)</label>
+        <details class="prop-group">
+          <summary>Camada</summary>
+          <div class="prop-group-body">
+            <label class="check"><input type="checkbox" id="p_visible"> Visível</label>
+            <label class="check" style="margin-top:6px"><input type="checkbox" id="p_multiline"> Multilinha</label>
+            <label class="check" style="margin-top:6px"><input type="checkbox" id="p_locked"> Bloqueada (clique no canvas atravessa)</label>
 
-        <hr class="section-divider">
-        <div class="field">
-          <label>Fonte</label>
-          <select id="p_font"></select>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Tamanho (pt)</label><input type="number" step="0.5" id="p_size"></div>
-          <div class="field"><label>Entrelinha (pt, 0=auto)</label><input type="number" step="0.5" id="p_lh"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Peso</label>
-            <select id="p_weight"><option value="normal">normal</option><option value="bold">bold</option></select>
+            <div class="field mt">
+              <label>Ordem de empilhamento (o que fica na frente)</label>
+              <div class="row gap-sm">
+                <button type="button" class="btn btn-sm" id="orderBack" title="Enviar para trás">⇤ trás</button>
+                <button type="button" class="btn btn-sm" id="orderDown" title="Descer uma camada">↓</button>
+                <button type="button" class="btn btn-sm" id="orderUp" title="Subir uma camada">↑</button>
+                <button type="button" class="btn btn-sm" id="orderFront" title="Trazer para frente">frente ⇥</button>
+              </div>
+              <input type="number" id="p_z" style="margin-top:8px" title="Valor exato de z-index, se preferir ajustar na mão">
+            </div>
+
+            <div class="field-row">
+              <div class="field"><label>Encaixe</label>
+                <select id="p_fit"><option value="cover">cover</option><option value="contain">contain</option><option value="stretch">stretch</option></select>
+              </div>
+              <div class="field"></div>
+            </div>
           </div>
-          <div class="field"><label>Estilo</label>
-            <select id="p_style"><option value="normal">normal</option><option value="italic">italic</option></select>
+        </details>
+
+        <details class="prop-group">
+          <summary>Tipografia</summary>
+          <div class="prop-group-body">
+            <div class="field">
+              <label>Fonte</label>
+              <select id="p_font"></select>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Tamanho (pt)</label><input type="number" step="0.5" id="p_size"></div>
+              <div class="field"><label>Entrelinha (pt, 0=auto)</label><input type="number" step="0.5" id="p_lh"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Peso</label>
+                <select id="p_weight"><option value="normal">normal</option><option value="bold">bold</option></select>
+              </div>
+              <div class="field"><label>Estilo</label>
+                <select id="p_style"><option value="normal">normal</option><option value="italic">italic</option></select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Alinhamento</label>
+                <select id="p_align"><option value="left">esquerda</option><option value="center">centro</option><option value="right">direita</option></select>
+              </div>
+              <div class="field"><label>Cor</label><input type="color" id="p_color" class="color-swatch"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Alinhamento vertical</label>
+                <select id="p_valign"><option value="top">topo</option><option value="middle">centro</option><option value="bottom">base</option></select>
+              </div>
+              <div class="field"><label>Espaç. entre letras (pt)</label><input type="number" step="0.1" id="p_letterspacing"></div>
+            </div>
           </div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Alinhamento</label>
-            <select id="p_align"><option value="left">esquerda</option><option value="center">centro</option><option value="right">direita</option></select>
-          </div>
-          <div class="field"><label>Cor</label><input type="color" id="p_color" class="color-swatch"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Alinhamento vertical</label>
-            <select id="p_valign"><option value="top">topo</option><option value="middle">centro</option><option value="bottom">base</option></select>
-          </div>
-          <div class="field"><label>Espaç. entre letras (pt)</label><input type="number" step="0.1" id="p_letterspacing"></div>
-        </div>
+        </details>
 
         <hr class="section-divider">
         <button type="button" class="btn btn-sm btn-danger" style="width:100%" id="btnDeleteLayer">Excluir camada</button>

@@ -99,7 +99,13 @@ O canvas do editor é uma representação rápida, mas não é pixel-perfeito co
 
 ### Salvando
 
-Clique em **Salvar template**. Uploads de fundo, verso e fonte já salvam automaticamente ao serem enviados; só as edições de camada (posição, texto, estilo) precisam do clique em Salvar.
+O editor salva sozinho: cerca de 1 segundo depois da última alteração (arrastar, digitar, alinhar, etc.), a edição é salva automaticamente — um indicador ao lado dos botões mostra **"Alterações não salvas…"** durante esse intervalo e **"Salvo às HH:MM"** depois que salva. O botão **Salvar template** continua disponível pra salvar na hora, se preferir não esperar.
+
+Se você tentar sair da página (fechar a aba, recarregar, ou clicar em outro item do menu) enquanto ainda houver uma alteração não salva, o navegador mostra um aviso de confirmação antes de sair — proteção extra pra aquele intervalo curto antes do auto-save disparar.
+
+### Organizando o painel de propriedades
+
+O painel da direita é dividido em grupos colapsáveis — **Conteúdo**, **Posição e tamanho**, **Camada**, **Tipografia** — clique no título de um grupo pra abrir ou fechar. O painel também tem rolagem própria (fica fixo enquanto você rola o resto da página), então não precisa mais descer a tela inteira pra alcançar uma opção mais abaixo.
 
 ## Duplicando e excluindo
 

@@ -30,6 +30,45 @@
   const imageCache = {};    // url -> HTMLImageElement
   const loadedFonts = new Set();
 
+  // ── Auto-save ────────────────────────────────────────────────────────────
+
+  const AUTO_SAVE_DELAY_MS = 1000;
+  let isDirty = false;
+  let autoSaveTimer = null;
+  const saveStatusEl = document.getElementById("saveStatus");
+
+  function setSaveStatus(state) {
+    if (!saveStatusEl) return;
+    saveStatusEl.classList.remove("dirty", "saving", "saved");
+    if (state === "dirty") {
+      saveStatusEl.textContent = "Alterações não salvas…";
+      saveStatusEl.classList.add("dirty");
+    } else if (state === "saving") {
+      saveStatusEl.textContent = "Salvando…";
+      saveStatusEl.classList.add("saving");
+    } else if (state === "saved") {
+      const t = new Date();
+      const hh = String(t.getHours()).padStart(2, "0"), mm = String(t.getMinutes()).padStart(2, "0");
+      saveStatusEl.textContent = `Salvo às ${hh}:${mm}`;
+      saveStatusEl.classList.add("saved");
+    } else {
+      saveStatusEl.textContent = "";
+    }
+  }
+
+  function scheduleAutoSave() {
+    isDirty = true;
+    setSaveStatus("dirty");
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => { saveTemplate(true); }, AUTO_SAVE_DELAY_MS);
+  }
+
+  window.addEventListener("beforeunload", evt => {
+    if (!isDirty) return;
+    evt.preventDefault();
+    evt.returnValue = ""; // navegadores modernos ignoram texto customizado aqui
+  });
+
   // ── Utilidades ────────────────────────────────────────────────────────────
 
   function mm(px) { return px / PX_PER_MM; }
@@ -297,7 +336,10 @@
     render();
   });
 
-  window.addEventListener("mouseup", () => { dragMode = null; });
+  window.addEventListener("mouseup", () => {
+    if (dragMode) scheduleAutoSave();
+    dragMode = null;
+  });
 
   // ── Mover camada selecionada com as setas do teclado (precisão) ─────────
 
@@ -317,6 +359,7 @@
     if (evt.key === "ArrowDown")  layer.y_mm = +(layer.y_mm + step).toFixed(2);
     syncPropsFromLayer(layer);
     render();
+    scheduleAutoSave();
   });
 
   // ── Lista de camadas ─────────────────────────────────────────────────────
@@ -337,6 +380,7 @@
         layer.locked = !layer.locked;
         renderLayerList();
         render();
+        scheduleAutoSave();
       });
       item.addEventListener("click", () => selectLayer(layer.id));
       list.appendChild(item);
@@ -401,6 +445,7 @@
       apply(layer, P(id));
       renderLayerList();
       render();
+      scheduleAutoSave();
     });
   }
 
@@ -452,6 +497,7 @@
     if (mode === "bottom")     layer.y_mm = +(ch - layer.height_mm).toFixed(2);
     syncPropsFromLayer(layer);
     render();
+    scheduleAutoSave();
   }
   P("alignLeft").addEventListener("click", () => alignLayer("left"));
   P("alignCenterH").addEventListener("click", () => alignLayer("center-h"));
@@ -482,6 +528,7 @@
     syncPropsFromLayer(layer);
     renderLayerList();
     render();
+    scheduleAutoSave();
   }
   P("orderFront").addEventListener("click", () => orderLayer("front"));
   P("orderBack").addEventListener("click", () => orderLayer("back"));
@@ -513,6 +560,7 @@
     if (!confirm("Excluir esta camada?")) return;
     T.layers = T.layers.filter(l => l.id !== selectedId);
     selectLayer(null);
+    scheduleAutoSave();
   });
 
   // ── Nova camada ───────────────────────────────────────────────────────────
@@ -534,6 +582,7 @@
     T.layers.push(base);
     renderLayerList();
     selectLayer(id);
+    scheduleAutoSave();
   });
 
   // ── Uploads ──────────────────────────────────────────────────────────────
@@ -600,6 +649,8 @@
   // ── Salvar ───────────────────────────────────────────────────────────────
 
   async function saveTemplate(silent) {
+    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    setSaveStatus("saving");
     const payload = {
       meta: { name: NAME, inherits: T.meta && T.meta.parent ? T.meta.parent : null },
       card: T.card,
@@ -607,14 +658,22 @@
       layers: T.layers,
       back_image: T.back_image || "",
     };
-    const res = await fetch(URLS.save, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!silent) {
-      if (data.ok) alert("Template salvo.");
-      else alert(data.error || "Erro ao salvar");
+    let data;
+    try {
+      const res = await fetch(URLS.save, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      data = await res.json();
+    } catch (e) {
+      data = { ok: false, error: "Falha de conexão ao salvar." };
+    }
+    if (data.ok) {
+      isDirty = false;
+      setSaveStatus("saved");
+    } else {
+      setSaveStatus("dirty");
+      alert(data.error || "Erro ao salvar");
     }
     return data.ok;
   }
