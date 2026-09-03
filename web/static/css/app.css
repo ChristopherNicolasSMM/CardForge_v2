@@ -212,10 +212,19 @@ table.data-table tr:hover td { background: rgba(255,255,255,0.015); }
   gap: 16px;
   align-items: start;
 }
+.editor-canvas-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.zoom-controls {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.zoom-controls .btn { min-width: 34px; padding: 6px 8px; }
+.zoom-label {
+  font-family: var(--font-mono); font-size: .78rem; color: var(--parchment-lo);
+  min-width: 44px; text-align: center;
+}
 .editor-canvas-wrap {
   background: var(--iron); border: 1px solid var(--iron-line); border-radius: var(--radius-md);
   padding: 24px; display: flex; align-items: center; justify-content: center;
-  min-height: 560px;
+  min-height: 560px; max-height: 720px; overflow: auto;
 }
 #cardCanvas { border: 1px solid var(--iron-line-lo); box-shadow: 0 0 0 6px var(--iron-panel); }
 .layer-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; max-height: 220px; overflow-y: auto; }

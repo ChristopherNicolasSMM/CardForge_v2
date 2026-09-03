@@ -9,7 +9,18 @@
   const canvas = document.getElementById("cardCanvas");
   const ctx = canvas.getContext("2d");
 
-  const PX_PER_MM = canvas.width / T.card.width_mm;
+  const BASE_SCALE = canvas.width / T.card.width_mm; // px/mm no zoom 100%
+  let zoomLevel = 1.0;
+  let PX_PER_MM = BASE_SCALE * zoomLevel;
+
+  function applyZoom() {
+    PX_PER_MM = BASE_SCALE * zoomLevel;
+    canvas.width = Math.round(T.card.width_mm * PX_PER_MM);
+    canvas.height = Math.round(T.card.height_mm * PX_PER_MM);
+    const label = document.getElementById("zoomLabel");
+    if (label) label.textContent = Math.round(zoomLevel * 100) + "%";
+    render();
+  }
   canvas.height = Math.round(T.card.height_mm * PX_PER_MM);
 
   let selectedId = null;
@@ -114,9 +125,21 @@
       ctx.textAlign = align === "center" ? "center" : (align === "right" ? "right" : "left");
       const tx = align === "center" ? x + w / 2 : (align === "right" ? x + w : x);
 
+      // Espaçamento entre letras (Canvas2D letterSpacing — suportado nos navegadores modernos)
+      const spacingPx = (s.letter_spacing_pt || 0) * (96 / 72) * (PX_PER_MM / (96 / 25.4));
+      if ("letterSpacing" in ctx) ctx.letterSpacing = spacingPx ? `${spacingPx}px` : "0px";
+
       const lh = (s.line_height_pt || (s.font_size_pt || 9) * 1.35) * (96 / 72) * (PX_PER_MM / (96 / 25.4));
       const lines = layer.multiline ? wrapText(String(text), w) : [String(text)];
-      lines.forEach((line, i) => ctx.fillText(line, tx, y + i * lh));
+
+      // Alinhamento vertical: posiciona o bloco de texto dentro da caixa
+      const totalH = lines.length * lh;
+      let startY = y;
+      if (s.vertical_align === "middle") startY = y + Math.max(0, (h - totalH) / 2);
+      else if (s.vertical_align === "bottom") startY = y + Math.max(0, h - totalH);
+
+      lines.forEach((line, i) => ctx.fillText(line, tx, startY + i * lh));
+      if ("letterSpacing" in ctx) ctx.letterSpacing = "0px"; // não vaza pra próxima camada desenhada
       return;
     }
   }
@@ -355,6 +378,8 @@
     P("p_style").value = s.font_style || "normal";
     P("p_align").value = s.align || "left";
     P("p_color").value = toHex(s.color || "#111111");
+    P("p_valign").value = s.vertical_align || "top";
+    P("p_letterspacing").value = s.letter_spacing_pt || 0;
 
     // Imagem fixa: só faz sentido pra camadas de imagem/fundo
     const isImageLike = layer.type === "image" || layer.type === "background";
@@ -410,6 +435,8 @@
   bindProp("p_style", (l, el) => { l.style = l.style || {}; l.style.font_style = el.value; });
   bindProp("p_align", (l, el) => { l.style = l.style || {}; l.style.align = el.value; });
   bindProp("p_color", (l, el) => { l.style = l.style || {}; l.style.color = el.value; });
+  bindProp("p_valign", (l, el) => { l.style = l.style || {}; l.style.vertical_align = el.value; });
+  bindProp("p_letterspacing", (l, el) => { l.style = l.style || {}; l.style.letter_spacing_pt = parseFloat(el.value) || 0; });
 
   // ── Alinhamento ───────────────────────────────────────────────────────────
 
@@ -502,7 +529,7 @@
       source_image: "", source_gradient: "",
       style: { font_family: window.CF_FONTS[0] || "Beleren-Bold", font_size_pt: 9,
                font_weight: "normal", font_style: "normal", color: "#111111",
-               align: "left", line_height_pt: 0 },
+               align: "left", vertical_align: "top", letter_spacing_pt: 0, line_height_pt: 0 },
     };
     T.layers.push(base);
     renderLayerList();
@@ -616,6 +643,31 @@
       alert(data.error || "Erro ao renderizar");
     }
   });
+
+  // ── Zoom ─────────────────────────────────────────────────────────────────
+
+  const ZOOM_MIN = 0.25, ZOOM_MAX = 4.0, ZOOM_STEP = 0.25;
+
+  function setZoom(newLevel) {
+    zoomLevel = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, newLevel));
+    const layer = selectedId ? layerById(selectedId) : null;
+    applyZoom();
+    if (layer) render(); // redesenha seleção corretamente na nova escala
+  }
+
+  const zoomInBtn = document.getElementById("zoomIn");
+  const zoomOutBtn = document.getElementById("zoomOut");
+  const zoomResetBtn = document.getElementById("zoomReset");
+  if (zoomInBtn) zoomInBtn.addEventListener("click", () => setZoom(zoomLevel + ZOOM_STEP));
+  if (zoomOutBtn) zoomOutBtn.addEventListener("click", () => setZoom(zoomLevel - ZOOM_STEP));
+  if (zoomResetBtn) zoomResetBtn.addEventListener("click", () => setZoom(1.0));
+
+  // Ctrl/Cmd + roda do mouse sobre o canvas também dá zoom
+  canvas.addEventListener("wheel", evt => {
+    if (!evt.ctrlKey && !evt.metaKey) return;
+    evt.preventDefault();
+    setZoom(zoomLevel + (evt.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+  }, { passive: false });
 
   // ── Boot ─────────────────────────────────────────────────────────────────
 

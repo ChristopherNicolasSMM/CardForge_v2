@@ -143,7 +143,8 @@ class SVGBuilder:
         elif layer.type in ("text", "mana"):
             value = self._get_value(layer, row)
             if value:
-                self._add_text(svg, layer, value, x, y, w, h)
+                self._add_text(svg, layer, value, layer.x_mm, layer.y_mm,
+                                layer.width_mm, layer.height_mm)
 
     def _add_background(self, svg, layer, x, y, w, h, color) -> None:
         # Tenta imagem
@@ -192,30 +193,46 @@ class SVGBuilder:
             })
             return
 
-    def _add_text(self, svg, layer, text, x, y, w, h) -> None:
+    def _add_text(self, svg, layer, text, x_mm, y_mm, w_mm, h_mm) -> None:
         s = layer.style
         font_size = f"{s.font_size_pt}pt"
         anchor = {"left": "start", "center": "middle", "right": "end"}.get(s.align, "start")
 
-        text_el = ET.SubElement(svg, "text", {
+        lines = text.split("\n") if layer.multiline else [text]
+
+        # Alinhamento vertical: desloca a linha de base da primeira linha
+        # conforme "topo" (padrão, mesmo comportamento de sempre) / "centro" / "base".
+        pt_to_mm = 25.4 / 72
+        lh_mm = s.line_height_resolved * pt_to_mm
+        total_h_mm = len(lines) * lh_mm
+        if s.vertical_align == "middle":
+            start_y_mm = y_mm + max(0.0, (h_mm - total_h_mm) / 2)
+        elif s.vertical_align == "bottom":
+            start_y_mm = y_mm + max(0.0, h_mm - total_h_mm)
+        else:
+            start_y_mm = y_mm
+
+        attrs = {
             "id":          layer.id,
-            "x":           x,
-            "y":           y,
+            "x":           _mm(x_mm),
+            "y":           _mm(start_y_mm),
             "font-family": s.font_family,
             "font-size":   font_size,
             "font-weight": s.font_weight,
             "font-style":  s.font_style,
             "fill":        s.color,
             "text-anchor": anchor,
-        })
+        }
+        if s.letter_spacing_pt:
+            attrs["letter-spacing"] = f"{s.letter_spacing_pt}pt"
 
-        lines = text.split("\n") if layer.multiline else [text]
-        lh    = _mm(s.line_height_resolved)
-        dy    = "0"
+        text_el = ET.SubElement(svg, "text", attrs)
+
+        dy = "0"
         for line in lines:
-            tspan = ET.SubElement(text_el, "tspan", {"x": x, "dy": dy})
+            tspan = ET.SubElement(text_el, "tspan", {"x": _mm(x_mm), "dy": dy})
             tspan.text = _escape(line)
-            dy = lh
+            dy = _mm(lh_mm)
 
     # ── Helpers ─────────────────────────────────────────────────────────────
 

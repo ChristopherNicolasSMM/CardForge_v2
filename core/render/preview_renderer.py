@@ -44,10 +44,17 @@ def clear_font_cache() -> None:
     _font_cache.clear()
 
 
-def _load_font(family: str, size_pt: float, weight: str = "normal", style: str = "normal",
+def _load_font(family: str, size_px: int, weight: str = "normal", style: str = "normal",
                 template_dir: Optional[Path] = None) -> ImageFont.FreeTypeFont:
-    # pt → px para PIL (96 dpi de tela)
-    size_px = max(8, int(size_pt * 96 / 72))
+    """Carrega a fonte já no tamanho em pixels correto pro DPI da renderização
+    atual. Importante: quem chama define size_px (normalmente
+    `font_size_pt * dpi_real / 72`) — esta função NÃO faz sua própria
+    conversão pt→px, pra não divergir do DPI real usado pela imagem (esse foi,
+    por muito tempo, o motivo do texto sair menor do que o esperado: a fonte
+    era carregada assumindo 96 DPI fixo, enquanto a imagem podia estar sendo
+    gerada a 110/180/300 DPI — a caixa do texto ficava no tamanho certo, mas a
+    fonte dentro dela vinha desproporcionalmente pequena)."""
+    size_px = max(6, int(size_px))
     key = (family, size_px, weight, style, str(template_dir))
     if key in _font_cache:
         return _font_cache[key]
@@ -115,7 +122,43 @@ def _fit_image(img: Image.Image, w: int, h: int, fit: str) -> Image.Image:
     return img
 
 
-def _wrap_text(text: str, font, max_width: int) -> list[str]:
+def _measure_text(draw: ImageDraw.Draw, text: str, font, spacing_px: int = 0) -> float:
+    """Largura do texto em pixels, já considerando espaçamento extra entre letras."""
+    if not text:
+        return 0
+    if spacing_px == 0:
+        try:
+            return draw.textlength(text, font=font)
+        except Exception:
+            return len(text) * getattr(font, "size", 8) * 0.6
+    total = 0.0
+    for ch in text:
+        try:
+            total += draw.textlength(ch, font=font)
+        except Exception:
+            total += getattr(font, "size", 8) * 0.6
+        total += spacing_px
+    return max(0.0, total - spacing_px)  # sem espaçamento depois do último caractere
+
+
+def _draw_text_spaced(draw: ImageDraw.Draw, x, y, text: str, font, fill, spacing_px: int = 0) -> None:
+    """Desenha uma linha de texto, opcionalmente com espaçamento extra entre letras.
+    PIL não tem tracking nativo — sem espaçamento, desenha a linha inteira de
+    uma vez (mais rápido); com espaçamento, desenha caractere por caractere."""
+    if spacing_px == 0:
+        draw.text((x, y), text, font=font, fill=fill)
+        return
+    cx = x
+    for ch in text:
+        draw.text((cx, y), ch, font=font, fill=fill)
+        try:
+            cw = draw.textlength(ch, font=font)
+        except Exception:
+            cw = getattr(font, "size", 8) * 0.6
+        cx += cw + spacing_px
+
+
+def _wrap_text(text: str, font, max_width: int, spacing_px: int = 0) -> list[str]:
     """Quebra texto respeitando largura máxima em pixels."""
     words  = text.split()
     lines: list[str] = []
@@ -123,10 +166,7 @@ def _wrap_text(text: str, font, max_width: int) -> list[str]:
     draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     for word in words:
         test = (current + " " + word).strip()
-        try:
-            tw = draw.textlength(test, font=font)
-        except Exception:
-            tw = len(test) * (getattr(font, "size", 8) * 0.6)
+        tw = _measure_text(draw, test, font, spacing_px)
         if tw <= max_width:
             current = test
         else:
@@ -300,29 +340,36 @@ class PreviewRenderer:
                    text: str, x, y, w, h) -> None:
         s    = layer.style
         size_px = max(6, int(s.font_size_pt * self.preview_dpi / 72))
-        font = _load_font(s.font_family, s.font_size_pt, s.font_weight, s.font_style,
+        font = _load_font(s.font_family, size_px, s.font_weight, s.font_style,
                            template_dir=self.template_dir)
         lh   = max(size_px + 2, int(s.line_height_resolved * self.preview_dpi / 72))
         color = _hex_to_rgba(s.color)
+        spacing_px = int(round(s.letter_spacing_pt * self.preview_dpi / 72))
 
         lines = text.split("\n") if layer.multiline else [text]
         if layer.multiline:
             wrapped: list[str] = []
             for line in lines:
-                wrapped.extend(_wrap_text(line, font, w) if line.strip() else [""])
+                wrapped.extend(_wrap_text(line, font, w, spacing_px) if line.strip() else [""])
             lines = wrapped
 
-        y_off = y
+        # Alinhamento vertical: posiciona o bloco de texto (todas as linhas)
+        # dentro da caixa da camada, conforme "topo" (padrão) / "centro" / "base".
+        total_h = len(lines) * lh
+        if s.vertical_align == "middle":
+            y_off = y + max(0, (h - total_h) // 2)
+        elif s.vertical_align == "bottom":
+            y_off = y + max(0, h - total_h)
+        else:
+            y_off = y
+
         for line in lines:
             if y_off + lh > y + h + lh:
                 break
             if not line.strip():
                 y_off += lh
                 continue
-            try:
-                tw = draw.textlength(line, font=font)
-            except Exception:
-                tw = len(line) * size_px * 0.6
+            tw = _measure_text(draw, line, font, spacing_px)
 
             if s.align == "center":
                 tx = x + (w - tw) // 2
@@ -331,7 +378,7 @@ class PreviewRenderer:
             else:
                 tx = x
 
-            draw.text((tx, y_off), line, font=font, fill=color)
+            _draw_text_spaced(draw, tx, y_off, line, font, color, spacing_px)
             y_off += lh
 
     @staticmethod

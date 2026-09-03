@@ -78,6 +78,8 @@ class LayerStyle:
     font_style:   str  = "normal"   # "normal" | "italic"
     color:        str  = "#111111"
     align:        str  = "left"     # "left" | "center" | "right"
+    vertical_align: str = "top"     # "top" | "middle" | "bottom" — posição do bloco de texto dentro da caixa
+    letter_spacing_pt: float = 0.0  # espaço extra entre letras, em pt (0 = padrão da fonte)
     line_height_pt: float = 0.0     # 0 = auto (font_size * 1.35)
 
     @property
@@ -92,6 +94,8 @@ class LayerStyle:
             "font_style":     self.font_style,
             "color":          self.color,
             "align":          self.align,
+            "vertical_align": self.vertical_align,
+            "letter_spacing_pt": self.letter_spacing_pt,
             "line_height_pt": self.line_height_pt,
         }
 
@@ -137,6 +141,8 @@ class LayerStyle:
             font_style     = d.get("font_style",  "normal"),
             color          = d.get("color",        "#111111"),
             align          = d.get("align",        d.get("text_align", "left")),
+            vertical_align = d.get("vertical_align", "top"),
+            letter_spacing_pt = float(d.get("letter_spacing_pt", 0.0)),
             line_height_pt = lh,
         )
 

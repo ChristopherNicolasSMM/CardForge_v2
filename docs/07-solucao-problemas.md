@@ -1,5 +1,11 @@
 # Solução de problemas
 
+## O texto ficou maior do que antes depois de atualizar
+
+Isso é esperado, e é uma correção, não um bug novo: até essa atualização, o tamanho da fonte era calculado com uma resolução fixa (96 DPI) independente da resolução real da imagem sendo gerada — o efeito prático era um texto sistematicamente **menor do que o configurado**, principalmente na geração final (que roda a 300 DPI por padrão). Agora o tamanho bate com o que está configurado em cada camada.
+
+Se você já tinha ajustado o tamanho de fonte "no olho" pra compensar esse encolhimento, pode precisar diminuir o `Tamanho (pt)` de algumas camadas depois dessa atualização. Use **◎ Ver renderização real** pra conferir.
+
 ## O texto de uma camada não aparece no card gerado
 
 - Confira se o **Campo do dataset** da camada bate exatamente com o nome de uma coluna no dataset (sem acento, minúsculo — o sistema tenta ignorar maiúscula/minúscula, mas não corrige acentos ou espaços). Use o autocomplete do campo pra ver os nomes reais disponíveis na coleção ativa.

@@ -56,6 +56,8 @@ Cada template vive em `collections/<coleção>/templates/<nome>/base.json` (dent
     "font_style": "normal",
     "color": "#111111",
     "align": "left",
+    "vertical_align": "top",
+    "letter_spacing_pt": 0.0,
     "line_height_pt": 0.0
   }
 }
@@ -78,6 +80,8 @@ Cada template vive em `collections/<coleção>/templates/<nome>/base.json` (dent
 - **`condition`** — controla se a camada aparece: `""` (sempre), `"has_pt"` (só se `power` e `toughness` estiverem preenchidos) ou `"has_flavor"` (só se `flavor_text` estiver preenchido).
 - **`fit`** — só relevante para `background`/`image`: `cover` (preenche e corta o excesso), `contain` (encaixa sem cortar, pode sobrar espaço) ou `stretch` (distorce para caber exatamente).
 - **`line_height_pt`** — `0` significa automático (`font_size_pt × 1.35`).
+- **`vertical_align`** — `"top"` (padrão, mesmo comportamento de sempre), `"middle"` ou `"bottom"`. Posiciona o bloco de texto dentro da altura da camada.
+- **`letter_spacing_pt`** — espaço extra entre caracteres, em pt. `0` (padrão) é o espaçamento normal da fonte.
 
 ## Herança entre templates
 

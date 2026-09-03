@@ -43,6 +43,10 @@ Clique no ícone 🔓 ao lado do nome de uma camada, na lista à esquerda, pra t
 
 No painel de propriedades, a seção **Alinhar na carta** tem seis botões que posicionam a camada selecionada relativa às bordas do card: esquerda, centro horizontal, direita, topo, centro vertical, base. É a forma rápida de deixar várias camadas alinhadas entre si (ex: encostar duas camadas na mesma margem esquerda) sem precisar acertar o `X`/`Y` manualmente.
 
+### Zoom no canvas
+
+Os controles **−** / **+** / **100%** acima do canvas ajustam o zoom (25% a 400%), pra ajustar posições com mais precisão em camadas pequenas ou em detalhes finos. **Ctrl+roda do mouse** sobre o canvas também funciona como atalho de zoom. O canvas ganha barra de rolagem automaticamente quando o zoom deixa o card maior que a área visível.
+
 ### Organizando a ordem das camadas (o que fica na frente)
 
 Quando duas camadas se sobrepõem, quem aparece por cima é definida pelo **z-index** — maior valor fica na frente. Em vez de adivinhar números, use os botões da seção **Ordem de empilhamento**:
@@ -69,7 +73,10 @@ O campo numérico abaixo dos botões continua disponível pra quem preferir digi
 | Encaixe | Para camadas de imagem/fundo: `cover` (preenche e corta), `contain` (encaixa sem cortar) ou `stretch` (estica) |
 | Visível | Desmarque para ocultar a camada sem excluí-la |
 | Multilinha | Quebra o texto automaticamente dentro da largura da camada |
-| Fonte, tamanho, peso, estilo, cor, alinhamento | Estilo tipográfico (só se aplica a camadas de texto) |
+| Fonte, tamanho, peso, estilo, cor | Estilo tipográfico (só se aplica a camadas de texto) |
+| Alinhamento | Alinhamento horizontal do texto dentro da caixa: esquerda, centro ou direita |
+| Alinhamento vertical | Posição do bloco de texto dentro da altura da caixa: topo (padrão), centro ou base — útil quando a caixa é mais alta que o texto |
+| Espaçamento entre letras | Distância extra entre cada caractere, em pt. `0` usa o espaçamento normal da fonte; valores maiores afastam as letras |
 
 ### Adicionando uma nova camada
 
