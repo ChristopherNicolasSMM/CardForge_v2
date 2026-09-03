@@ -5,7 +5,7 @@
     <div>
       <span class="eyebrow">editor visual</span>
       <h1>{{ name }}</h1>
-      <p>Arraste as camadas no canvas pra reposicionar. Use a alça no canto inferior direito pra redimensionar.</p>
+      <p>Arraste as camadas no canvas pra reposicionar (a selecionada tem prioridade, mesmo com outra por cima). Use a alça no canto inferior direito pra redimensionar, as setas do teclado pra ajuste fino, <strong>Alt+clique</strong> pra alcançar uma camada escondida embaixo de outra, e o 🔒 na lista pra travar uma camada contra cliques.</p>
     </div>
     <div class="row gap-sm">
       <button class="btn" id="btnRealPreview">◎ Ver renderização real</button>
@@ -120,6 +120,7 @@
         </div>
         <label class="check"><input type="checkbox" id="p_visible"> Visível</label>
         <label class="check" style="margin-top:6px"><input type="checkbox" id="p_multiline"> Multilinha</label>
+        <label class="check" style="margin-top:6px"><input type="checkbox" id="p_locked"> Bloqueada (clique no canvas atravessa)</label>
 
         <hr class="section-divider">
         <div class="field">

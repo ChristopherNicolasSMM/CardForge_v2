@@ -153,45 +153,101 @@
   function drawSelection(layer) {
     if (!layer) return;
     const x = px(layer.x_mm), y = px(layer.y_mm), w = px(layer.width_mm), h = px(layer.height_mm);
-    ctx.strokeStyle = "#DE6A30";
+    ctx.strokeStyle = layer.locked ? "#8a8a8a" : "#DE6A30";
     ctx.lineWidth = 2;
+    ctx.setLineDash(layer.locked ? [5, 4] : []);
     ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = "#DE6A30";
-    ctx.fillRect(x + w - 8, y + h - 8, 8, 8);
+    ctx.setLineDash([]);
+    if (!layer.locked) {
+      ctx.fillStyle = "#DE6A30";
+      ctx.fillRect(x + w - 8, y + h - 8, 8, 8);
+    } else {
+      ctx.font = "12px sans-serif";
+      ctx.fillStyle = "#c9c9c9";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText("🔒", x + 3, y + 3);
+    }
   }
 
   // ── Interação: arrastar / redimensionar ─────────────────────────────────
+  //
+  // Regras de clique (resolvem o problema de "clicar sempre pega a camada de
+  // cima, mesmo com outra já selecionada por baixo"):
+  //   1. Clique dentro da camada JÁ SELECIONADA (e destravada) sempre arrasta
+  //      ela, não importa se há outra camada por cima nesse ponto.
+  //   2. Alt+clique fura a pilha: cicla, a cada clique no mesmo ponto, pela
+  //      lista de camadas sobrepostas ali (da mais de cima pra mais de baixo).
+  //   3. Clique comum fora da selecionada: pega a camada do topo, como antes.
+  //   4. Camadas travadas (🔒) nunca são pegas por clique no canvas — só pela
+  //      lista de camadas à esquerda.
 
   function mousePos(evt) {
     const rect = canvas.getBoundingClientRect();
     return { mx: evt.clientX - rect.left, my: evt.clientY - rect.top };
   }
 
+  function layersAtPoint(mx, my) {
+    return sortedLayers().reverse().filter(l => {
+      if (l.locked) return false;
+      const x = px(l.x_mm), y = px(l.y_mm), w = px(l.width_mm), h = px(l.height_mm);
+      return mx >= x && mx <= x + w && my >= y && my <= y + h;
+    });
+  }
+
   function hitTest(mx, my) {
-    const layers = sortedLayers().reverse();
-    for (const layer of layers) {
-      const x = px(layer.x_mm), y = px(layer.y_mm), w = px(layer.width_mm), h = px(layer.height_mm);
-      if (mx >= x && mx <= x + w && my >= y && my <= y + h) return layer;
-    }
-    return null;
+    const layers = layersAtPoint(mx, my);
+    return layers.length ? layers[0] : null;
   }
 
   function nearHandle(layer, mx, my) {
-    if (!layer) return false;
+    if (!layer || layer.locked) return false;
     const x = px(layer.x_mm) + px(layer.width_mm);
     const y = px(layer.y_mm) + px(layer.height_mm);
     return Math.abs(mx - x) <= 10 && Math.abs(my - y) <= 10;
   }
 
+  let altCycle = null; // { mx, my, index }
+
   canvas.addEventListener("mousedown", evt => {
     const { mx, my } = mousePos(evt);
     const selected = selectedId ? layerById(selectedId) : null;
 
+    // Alça de redimensionar tem prioridade máxima (só se destravada)
     if (selected && nearHandle(selected, mx, my)) {
       dragMode = "resize";
       dragStart = { mx, my, w_mm: selected.width_mm, h_mm: selected.height_mm };
       return;
     }
+
+    // Alt+clique: fura a pilha, ciclando pelas camadas sobrepostas nesse ponto
+    if (evt.altKey) {
+      const candidates = layersAtPoint(mx, my);
+      if (candidates.length === 0) { altCycle = null; selectLayer(null); return; }
+      const samePoint = altCycle && Math.abs(altCycle.mx - mx) < 4 && Math.abs(altCycle.my - my) < 4;
+      const idx = samePoint ? (altCycle.index + 1) % candidates.length : 0;
+      altCycle = { mx, my, index: idx };
+      const target = candidates[idx];
+      selectLayer(target.id);
+      dragMode = "move";
+      dragStart = { mx, my, x_mm: target.x_mm, y_mm: target.y_mm };
+      return;
+    }
+    altCycle = null;
+
+    // Clique dentro da camada já selecionada: arrasta ela, mesmo se outra
+    // camada estiver visualmente por cima nesse ponto.
+    if (selected && !selected.locked) {
+      const x = px(selected.x_mm), y = px(selected.y_mm),
+            w = px(selected.width_mm), h = px(selected.height_mm);
+      if (mx >= x && mx <= x + w && my >= y && my <= y + h) {
+        dragMode = "move";
+        dragStart = { mx, my, x_mm: selected.x_mm, y_mm: selected.y_mm };
+        return;
+      }
+    }
+
+    // Clique comum: pega a camada do topo nesse ponto (ignora travadas)
     const hit = hitTest(mx, my);
     selectLayer(hit ? hit.id : null);
     if (hit) {
@@ -204,7 +260,7 @@
     if (!dragMode) return;
     const { mx, my } = mousePos(evt);
     const layer = layerById(selectedId);
-    if (!layer) return;
+    if (!layer || layer.locked) return;
     const dxmm = mm(mx - dragStart.mx), dymm = mm(my - dragStart.my);
 
     if (dragMode === "move") {
@@ -220,6 +276,26 @@
 
   window.addEventListener("mouseup", () => { dragMode = null; });
 
+  // ── Mover camada selecionada com as setas do teclado (precisão) ─────────
+
+  window.addEventListener("keydown", evt => {
+    const tag = (evt.target.tagName || "").toLowerCase();
+    if (["input", "select", "textarea"].includes(tag)) return; // não atrapalha digitação
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(evt.key)) return;
+
+    const layer = selectedId ? layerById(selectedId) : null;
+    if (!layer || layer.locked) return;
+
+    evt.preventDefault();
+    const step = evt.shiftKey ? 2 : 0.5; // mm — Shift pra passo maior
+    if (evt.key === "ArrowLeft")  layer.x_mm = Math.max(0, +(layer.x_mm - step).toFixed(2));
+    if (evt.key === "ArrowRight") layer.x_mm = +(layer.x_mm + step).toFixed(2);
+    if (evt.key === "ArrowUp")    layer.y_mm = Math.max(0, +(layer.y_mm - step).toFixed(2));
+    if (evt.key === "ArrowDown")  layer.y_mm = +(layer.y_mm + step).toFixed(2);
+    syncPropsFromLayer(layer);
+    render();
+  });
+
   // ── Lista de camadas ─────────────────────────────────────────────────────
 
   function renderLayerList() {
@@ -227,9 +303,19 @@
     list.innerHTML = "";
     for (const layer of sortedLayers().reverse()) {
       const item = document.createElement("div");
-      item.className = "layer-item" + (layer.id === selectedId ? " selected" : "");
-      item.innerHTML = `<span>${layer.label || layer.id}</span><span class="type-tag" title="z-index ${layer.z_index}">${layer.type} · ${layer.z_index}</span>`;
-      item.onclick = () => selectLayer(layer.id);
+      item.className = "layer-item" + (layer.id === selectedId ? " selected" : "") + (layer.locked ? " locked" : "");
+      item.innerHTML = `
+        <span class="lock-toggle" title="${layer.locked ? 'Destravar (permitir clique/arraste no canvas)' : 'Travar (clique no canvas atravessa essa camada)'}">${layer.locked ? "🔒" : "🔓"}</span>
+        <span class="layer-name">${layer.label || layer.id}</span>
+        <span class="type-tag" title="z-index ${layer.z_index}">${layer.type} · ${layer.z_index}</span>
+      `;
+      item.querySelector(".lock-toggle").addEventListener("click", e => {
+        e.stopPropagation();
+        layer.locked = !layer.locked;
+        renderLayerList();
+        render();
+      });
+      item.addEventListener("click", () => selectLayer(layer.id));
       list.appendChild(item);
     }
   }
@@ -260,6 +346,7 @@
     P("p_fit").value = layer.fit || "cover";
     P("p_visible").checked = !!layer.visible;
     P("p_multiline").checked = !!layer.multiline;
+    P("p_locked").checked = !!layer.locked;
     const s = layer.style || {};
     P("p_font").value = s.font_family || "";
     P("p_size").value = s.font_size_pt || 9;
@@ -315,6 +402,7 @@
   bindProp("p_fit", (l, el) => l.fit = el.value);
   bindProp("p_visible", (l, el) => l.visible = el.checked);
   bindProp("p_multiline", (l, el) => l.multiline = el.checked);
+  bindProp("p_locked", (l, el) => { l.locked = el.checked; });
   bindProp("p_font", (l, el) => { l.style = l.style || {}; l.style.font_family = el.value; loadedFonts.delete(el.value); ensureFont(el.value); });
   bindProp("p_size", (l, el) => { l.style = l.style || {}; l.style.font_size_pt = parseFloat(el.value) || 9; });
   bindProp("p_lh", (l, el) => { l.style = l.style || {}; l.style.line_height_pt = parseFloat(el.value) || 0; });

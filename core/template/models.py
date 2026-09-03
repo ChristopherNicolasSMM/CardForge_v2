@@ -160,6 +160,7 @@ class Layer:
     z_index:   int   = 0
     visible:   bool  = True
     multiline: bool  = False
+    locked:    bool  = False   # trava a camada contra clique/arraste no editor (não afeta a renderização)
 
     # Para layers de imagem
     fit:             str = "cover"   # "cover" | "contain" | "stretch"
@@ -182,7 +183,7 @@ class Layer:
             "x_mm": self.x_mm, "y_mm": self.y_mm,
             "width_mm": self.width_mm, "height_mm": self.height_mm,
             "z_index": self.z_index, "visible": self.visible,
-            "multiline": self.multiline, "fit": self.fit,
+            "multiline": self.multiline, "locked": self.locked, "fit": self.fit,
             "source_image": self.source_image,
             "source_gradient": self.source_gradient,
             "style": self.style.to_dict(),
@@ -213,6 +214,7 @@ class Layer:
             z_index      = int(d.get("z_index",  0)),
             visible      = bool(d.get("visible", True)),
             multiline    = bool(d.get("multiline", False)),
+            locked       = bool(d.get("locked", False)),
             fit          = d.get("fit", "cover"),
             source_image = d.get("source_image", d.get("background", "")),
             source_gradient = d.get("source_gradient", ""),

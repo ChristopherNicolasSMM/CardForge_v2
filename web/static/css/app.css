@@ -220,15 +220,20 @@ table.data-table tr:hover td { background: rgba(255,255,255,0.015); }
 #cardCanvas { border: 1px solid var(--iron-line-lo); box-shadow: 0 0 0 6px var(--iron-panel); }
 .layer-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; max-height: 220px; overflow-y: auto; }
 .layer-item {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: 7px;
   padding: 7px 9px; border-radius: 3px; font-size: .8rem; cursor: pointer;
   border: 1px solid transparent; color: var(--parchment-lo);
 }
 .layer-item:hover { background: rgba(255,255,255,0.03); }
 .layer-item.selected { border-color: var(--ember); color: var(--parchment); background: rgba(193,82,31,0.08); }
+.layer-item.locked { opacity: .58; }
+.layer-item.locked.selected { opacity: .85; }
+.layer-item .lock-toggle { cursor: pointer; font-size: .78rem; flex-shrink: 0; }
+.layer-item .lock-toggle:hover { transform: scale(1.15); }
+.layer-item .layer-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .layer-item .type-tag {
   font-family: var(--font-mono); font-size: .65rem; color: var(--temper-hi);
-  padding: 1px 5px; border: 1px solid var(--iron-line); border-radius: 3px;
+  padding: 1px 5px; border: 1px solid var(--iron-line); border-radius: 3px; flex-shrink: 0;
 }
 .color-swatch {
   width: 28px; height: 28px; border-radius: 3px; border: 1px solid var(--iron-line); cursor: pointer;

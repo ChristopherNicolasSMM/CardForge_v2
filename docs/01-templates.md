@@ -22,10 +22,22 @@ O editor tem três painéis:
 
 Clique numa camada no canvas (ou na lista à esquerda) para selecioná-la. Depois:
 
-- **Arraste o corpo da camada** para mover.
+- **Arraste o corpo da camada** para mover — a camada **selecionada** sempre tem prioridade no arraste, mesmo que outra camada esteja visualmente por cima dela nesse ponto do canvas. Assim, depois de selecionar pela lista uma camada que está "escondida" atrás de outra, você consegue arrastá-la normalmente.
 - **Arraste a alça no canto inferior direito** (o quadradinho laranja) para redimensionar.
+- **Setas do teclado** movem a camada selecionada em passos pequenos (0,5mm); segure **Shift** pra passos maiores (2mm) — útil pra ajustes finos difíceis de acertar só com o mouse.
+- **Alt+clique** no canvas "fura" a pilha de camadas: cada Alt+clique no mesmo ponto seleciona a próxima camada abaixo daquela, ciclando pela pilha inteira ali. Use isso quando quiser selecionar uma camada só clicando no canvas, mesmo com várias sobrepostas no mesmo lugar.
 
 Todas as posições são salvas em milímetros, então o card se comporta do mesmo jeito em qualquer resolução de tela.
+
+### Travando uma camada
+
+Clique no ícone 🔓 ao lado do nome de uma camada, na lista à esquerda, pra travá-la (vira 🔒). Uma camada travada:
+
+- **Não é mais selecionável por clique no canvas** — o clique atravessa ela e pega o que estiver embaixo (ou nada, se não houver mais nada ali).
+- Ainda pode ser selecionada pela **lista de camadas**, e editada normalmente pelo painel de propriedades (os campos numéricos continuam funcionando).
+- Não pode ser arrastada nem redimensionada pelo canvas enquanto estiver travada.
+
+É útil pra proteger uma camada grande (como o fundo) de atrapalhar cliques nas camadas menores por cima dela. Também dá pra travar/destravar pelo checkbox **Bloqueada** no painel de propriedades.
 
 ### Alinhando camadas
 
