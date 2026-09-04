@@ -5,12 +5,10 @@ numa camada de texto) podem conter notação entre chaves `{X}` para inserir
 um ícone no meio do texto, em vez de escrever a palavra por extenso. A
 notação é a mesma usada por ferramentas de MTG em geral.
 
-> ⚠️ **Nota sobre os ícones atuais:** os ícones usados hoje são
-> placeholders herdados do início do projeto — servem para validar o
-> encaixe e o posicionamento, mas ainda não são os símbolos definitivos.
-> A substituição pelo conjunto final está mapeada em
-> `docs/tech/doc-tecnico-mtg-symbols-frames.md`. A notação abaixo (o que
-> você digita no CSV) não muda quando os ícones forem trocados.
+> Os ícones usados aqui são compostos a partir dos glifos oficiais do
+> projeto [Mana](https://mana.andrewgioia.com/) (licença SIL OFL 1.1),
+> com a paleta de cores oficial do mesmo projeto. Ver
+> `assets/mana-src/ATTRIBUTION.md` para os detalhes de licenciamento.
 
 Se a notação dentro das chaves não for reconhecida, o texto aparece como
 digitado (ex: `{ZZ}`) em vez de sumir ou quebrar a geração da carta.
@@ -31,15 +29,14 @@ digitado (ex: `{ZZ}`) em vez de sumir ou quebrar a geração da carta.
 
 | Notação | Ícone |
 |---|---|
-| `{0}` … `{9}` | custo genérico (um dígito) |
+| `{0}` … `{20}`, `{100}` | custo genérico |
 | `{X}` | símbolo X |
 | `{T}` | ativar (tap) |
 | `{Q}` | desativar (untap) |
 | `{E}` | energia |
 
-> Custos genéricos de dois dígitos ou mais (ex: `{16}`) ainda não têm
-> ícone dedicado — aparecem como texto (`16`) até esse conjunto ser
-> ampliado.
+> Outros valores numéricos de 2+ dígitos fora de 0–20/100 ainda aparecem
+> como texto (ex: `{37}`) — sem ícone dedicado.
 
 ## Híbrido
 
@@ -66,6 +63,13 @@ Combina duas cores em phyrexian — qualquer uma das duas cores, ou vida.
 
 `{W/B/P}` `{W/R/P}` `{W/G/P}` `{W/U/P}` `{B/R/P}` `{B/G/P}` `{B/U/P}`
 `{R/G/P}` `{R/U/P}` `{G/U/P}` (e combinações inversas)
+
+## Como inserir sem decorar a notação
+
+Tanto a tela de **Dados** quanto o campo "Texto fixo" do editor de
+template têm um botão **🔮 Símbolo** que abre uma paleta visual — clique
+no ícone desejado pra inserir a notação automaticamente na posição do
+cursor.
 
 ## Exemplo de uso no CSV
 

@@ -4,15 +4,14 @@ Mana Symbols — resolução de notação `{X}` (estilo MTG) para ícones inline
 Ver docs/tech/doc-tecnico-mtg-symbols-frames.md para o mapeamento completo
 da decisão de arquitetura.
 
-Fonte visual dos ícones hoje: assets/icons/ — SVGs placeholder herdados do
-início do projeto (não são os símbolos oficiais de mana; ver seção 2 do
-documento técnico sobre a substituição planejada pelos ícones do projeto
-Mana, github.com/andrewgioia/mana, licença SIL OFL 1.1).
+Fonte visual dos ícones: compostos a partir dos glifos vendorizados do
+projeto Mana (github.com/andrewgioia/mana, licença SIL OFL 1.1 pra fonte,
+MIT pro CSS — ver assets/mana-src/ATTRIBUTION.md) mais a paleta oficial de
+cores do mesmo projeto, via scripts/generate_mana_icons.py.
 
 Esta engine é agnóstica ao conteúdo visual: resolve notação → caminho de
-PNG pré-rasterizado em assets/icons_png/ (gerado a partir dos SVGs por
-scripts/generate_mana_icons.py). Trocar os ícones no futuro é só trocar os
-PNGs dentro da mesma estrutura de pastas — não exige mudar este módulo.
+PNG pré-gerado em assets/icons_png/. Trocar os ícones no futuro é só
+regenerar essa pasta — não exige mudar este módulo.
 """
 from __future__ import annotations
 
@@ -21,7 +20,6 @@ from pathlib import Path
 from typing import Optional
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-ICONS_SVG_DIR = ROOT / "assets" / "icons"
 ICONS_PNG_DIR = ROOT / "assets" / "icons_png"
 
 # Letra de notação -> nome de cor por extenso, usado para montar os caminhos
@@ -35,8 +33,11 @@ _resolve_cache: dict[str, Optional[Path]] = {}
 
 def _resolve_relpath(token: str) -> Optional[str]:
     """Notação normalizada (ex: 'W', 'T', '2/R', 'W/P', 'W/B/P') -> caminho
-    relativo dentro de assets/icons/. Retorna None se a notação não for
-    reconhecida (quem chama deve cair para desenhar o token como texto)."""
+    relativo "lógico" (extensão .svg por convenção histórica interna —
+    resolve_icon_png() troca por .svg->.png e resolve contra
+    assets/icons_png/, que é a árvore real gerada). Retorna None se a
+    notação não for reconhecida (quem chama deve cair para desenhar o
+    token como texto)."""
     t = token.strip().upper()
     if not t:
         return None
@@ -51,10 +52,10 @@ def _resolve_relpath(token: str) -> Optional[str]:
         return f"{t}.svg"
     if t.isdigit():
         n = int(t)
-        # Genérico de 0-9 tem ícone dedicado; 2+ dígitos ainda não (cai para
-        # o fallback textual em tokenize()) — ver limitação conhecida no
-        # documento técnico.
-        return f"{n}.svg" if 0 <= n <= 9 else None
+        # Genérico de 0-20 e 100 têm ícone dedicado (glifos vendorizados do
+        # Mana); outros valores de 2+ dígitos caem no fallback textual em
+        # tokenize().
+        return f"{n}.svg" if (0 <= n <= 20 or n == 100) else None
 
     parts = t.split("/")
     if len(parts) == 2:
@@ -71,12 +72,10 @@ def _resolve_relpath(token: str) -> Optional[str]:
     elif len(parts) == 3:
         a, b, p = parts
         if p == "P" and a in _COLOR_NAMES and b in _COLOR_NAMES:  # híbrido phyrexian
-            rel = f"phyrexian/{_COLOR_NAMES[a]}-{_COLOR_NAMES[b]}.svg"
-            if (ICONS_SVG_DIR / rel).exists():
-                return rel
-            rel_swapped = f"phyrexian/{_COLOR_NAMES[b]}-{_COLOR_NAMES[a]}.svg"
-            if (ICONS_SVG_DIR / rel_swapped).exists():
-                return rel_swapped
+            # resolve_icon_png() confere a existência real do PNG depois —
+            # aqui só monta o caminho candidato, sem checar disco (o gerador
+            # atual já emite as duas ordens, a-b e b-a).
+            return f"phyrexian/{_COLOR_NAMES[a]}-{_COLOR_NAMES[b]}.svg"
     return None
 
 
@@ -116,7 +115,7 @@ def catalog() -> list[dict]:
         ("Cores", "C", "Incolor"), ("Cores", "S", "Neve"),
     ]
     entries += [
-        ("Genérico e especiais", str(n), str(n)) for n in range(10)
+        ("Genérico e especiais", str(n), str(n)) for n in list(range(21)) + [100]
     ]
     entries += [
         ("Genérico e especiais", "X", "X"),

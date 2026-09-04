@@ -1,0 +1,390 @@
+{
+  "meta": {
+    "name": "T1",
+    "parent": ""
+  },
+  "card": {
+    "width_mm": 63.0,
+    "height_mm": 88.0,
+    "dpi": 300
+  },
+  "gradients": {
+    "white": {
+      "id": "white",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#F5F5DC"
+        },
+        {
+          "offset": "100%",
+          "color": "#E8E6D0"
+        }
+      ]
+    },
+    "blue": {
+      "id": "blue",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#B0C4DE"
+        },
+        {
+          "offset": "100%",
+          "color": "#7B9EB0"
+        }
+      ]
+    },
+    "black": {
+      "id": "black",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#3A3A3A"
+        },
+        {
+          "offset": "100%",
+          "color": "#1A1A1A"
+        }
+      ]
+    },
+    "red": {
+      "id": "red",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#E34234"
+        },
+        {
+          "offset": "100%",
+          "color": "#B22222"
+        }
+      ]
+    },
+    "green": {
+      "id": "green",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#6B8E23"
+        },
+        {
+          "offset": "100%",
+          "color": "#4A7023"
+        }
+      ]
+    },
+    "gold": {
+      "id": "gold",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#D4AF37"
+        },
+        {
+          "offset": "100%",
+          "color": "#B8860B"
+        }
+      ]
+    },
+    "colorless": {
+      "id": "colorless",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#D0D0D0"
+        },
+        {
+          "offset": "100%",
+          "color": "#A9A9A9"
+        }
+      ]
+    },
+    "artifact": {
+      "id": "artifact",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#C8C8C8"
+        },
+        {
+          "offset": "100%",
+          "color": "#909090"
+        }
+      ]
+    }
+  },
+  "layers": [
+    {
+      "id": "card_name",
+      "type": "text",
+      "label": "Nome",
+      "field": "name",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 3.5,
+      "y_mm": 3.5,
+      "width_mm": 46,
+      "height_mm": 5.5,
+      "z_index": 0,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 10,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0.0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "mana_cost",
+      "type": "text",
+      "label": "Custo Mana",
+      "field": "mana_cost",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 49,
+      "y_mm": 3.5,
+      "width_mm": 11,
+      "height_mm": 5.5,
+      "z_index": 0,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 8,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "right",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0.0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "type_line",
+      "type": "text",
+      "label": "Tipo",
+      "field": "type_line",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 3.5,
+      "y_mm": 51,
+      "width_mm": 56,
+      "height_mm": 4.5,
+      "z_index": 0,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 7.5,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0.0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "rules_text",
+      "type": "text",
+      "label": "Regras",
+      "field": "rules_text",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 3.5,
+      "y_mm": 56,
+      "width_mm": 56,
+      "height_mm": 20,
+      "z_index": 1,
+      "visible": true,
+      "multiline": true,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 7,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0.0,
+        "line_height_pt": 9.5
+      }
+    },
+    {
+      "id": "flavor_text",
+      "type": "text",
+      "label": "Flavor",
+      "field": "flavor_text",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 3.5,
+      "y_mm": 77,
+      "width_mm": 56,
+      "height_mm": 7,
+      "z_index": 1,
+      "visible": true,
+      "multiline": true,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 6.5,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#444444",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0.0,
+        "line_height_pt": 8.5
+      }
+    },
+    {
+      "id": "power",
+      "type": "text",
+      "label": "Poder",
+      "field": "power",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 47,
+      "y_mm": 79,
+      "width_mm": 7,
+      "height_mm": 5.5,
+      "z_index": 0,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 10,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "center",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0.0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "toughness",
+      "type": "text",
+      "label": "Resistência",
+      "field": "toughness",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 55,
+      "y_mm": 79,
+      "width_mm": 7,
+      "height_mm": 5.5,
+      "z_index": 0,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 10,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "center",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0.0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "artist",
+      "type": "text",
+      "label": "Artista",
+      "field": "artist",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 3.5,
+      "y_mm": 84,
+      "width_mm": 38,
+      "height_mm": 3.5,
+      "z_index": 0,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 5,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#333333",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0.0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "set_info",
+      "type": "text",
+      "label": "Set",
+      "field": "set_info",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 48,
+      "y_mm": 84,
+      "width_mm": 14,
+      "height_mm": 3.5,
+      "z_index": 0,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 4.5,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#333333",
+        "align": "right",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0.0,
+        "line_height_pt": 0
+      }
+    }
+  ],
+  "back_image": ""
+}

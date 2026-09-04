@@ -155,7 +155,7 @@ Nova página em `docs/` (ex: `docs/simbolos-mana.md`), renderizada pelo sistema 
 
 1. ~~Validar empiricamente o comportamento de campo de imagem não correspondente~~ — feito, ver seção 5.5.
 2. ~~Confirmar a rotina exata de resolução de path de asset por campo~~ — feito, ver seção 11.2: é a mesma rotina do bug da biblioteca de imagens, em ambos os renderers.
-3. Substituir os PNGs placeholder pelos ícones reais do projeto Mana (rasterizados via `scripts/generate_mana_icons.py` a partir de SVGs equivalentes aos do Mana, ou adaptando o script pra rasterizar a fonte diretamente).
+3. ~~Substituir os PNGs placeholder pelos ícones reais do projeto Mana~~ — feito, ver seção 13.
 4. Implementar o helper visual no editor de template.
 5. ~~Escrever a página de wiki~~ — feito, `docs/09-simbolos-mana.md`.
 6. Investigar e corrigir o bug de unidades encontrado em `svg_builder.py` (seção 11.3) — não bloqueia esta feature, mas afeta a qualidade do export SVG de forma geral.
@@ -244,3 +244,47 @@ Terceira rodada desta feature. Implementa o item que ficava pendente desde a se�
 - Sintaxe JS validada nos três arquivos (`symbol-picker.js`, `data-table.js`, `editor.js`) via Node.
 - Fluxo completo testado via `test_client`: criar coleção → página Dados carrega com `btnInsertSymbol` e `symbol-picker.js` presentes → criar template → página do editor carrega com `btnInsertSymbolStatic` e `symbol-picker.js` presentes.
 - **Não testado nesta rodada:** interação real de clique no navegador (o `test_client` confirma que HTML/rotas/JS estão corretos e presentes, mas não substitui abrir de fato e clicar). Recomenda-se um teste manual rápido antes de considerar 100% fechado.
+
+## 13. Troca dos ícones placeholder pelos reais do Mana — registro de implementação
+
+Quarta rodada desta feature. Substitui os placeholders (ícones estilo Google Material Symbols, herdados do início do projeto) pelos símbolos reais de mana, usando o projeto Mana como fonte.
+
+### 13.1 Descoberta que mudou o plano original
+
+O plano original (seção 2.1) era "rasterizar os SVGs do Mana direto". Investigando o pacote `mana-font` (npm), descobri que isso não funciona como esperado: os SVGs individuais do Mana (`w.svg`, `u.svg` etc.) contêm **só o contorno do símbolo** — o círculo colorido de fundo que dá a identidade visual clássica ("pip" branco/azul/preto/vermelho/verde) é aplicado via CSS (`background-color` na classe `.ms-cost`) no projeto original, não faz parte do arquivo SVG. Rasterizar os SVGs sozinhos teria produzido símbolos cinza sem cor nenhuma.
+
+Tentei resolver isso renderizando a composição real via navegador (Playwright/Chromium, já usado no projeto pra outra finalidade) — mas o download do binário do Chromium é bloqueado pela allowlist de rede deste ambiente de execução (`cdn.playwright.dev` não está liberado). Sem navegador disponível, não dava pra rodar a CSS de verdade.
+
+**Solução adotada:** reconstruir a composição (círculo colorido + glifo + split diagonal pra híbridos) diretamente em Python/PIL, usando a paleta oficial de cores do próprio Mana (extraída de `sass/_variables.scss` do pacote) — não é uma reprodução pixel-a-pixel da CSS original, mas usa os mesmos glifos e as mesmas cores oficiais, e visualmente é uma cópia bem próxima do símbolo real.
+
+### 13.2 O que foi vendorizado
+
+34 glifos-base do Mana (`assets/mana-src/glyphs/` — as 5 cores, incolor, genérico 0–20 e 100, X, tap, untap, energia, símbolo Phyrexian genérico), sob SIL OFL 1.1 (ver `assets/mana-src/ATTRIBUTION.md` para o texto de licença completo, extraído do README oficial do projeto). Não é o pacote Mana inteiro — só o subconjunto usado pela notação que o CardForge suporta.
+
+### 13.3 Composição implementada
+
+`scripts/generate_mana_icons.py` foi reescrito (era um rasterizador simples de `assets/icons/*.svg`; agora compõe a partir dos glifos vendorizados):
+
+- **Símbolos simples** (cor, genérico, X, tap, untap, energia): círculo colorido + glifo centralizado, recolorido (`#111` sobre fundo colorido; branco sobre fundo escuro pra tap/untap).
+- **Híbrido** (`{W/B}`): círculo dividido na diagonal (aproxima o `linear-gradient(135deg)` do CSS original) entre as duas cores, com os dois glifos de letra sobrepostos.
+- **Two-brid** (`{2/W}`): mesmo esquema, um lado incolor com "2", outro colorido com a letra.
+- **Phyrexian** (`{W/P}`): círculo na cor, com o símbolo Phyrexian genérico centralizado no lugar da letra.
+- **Phyrexian híbrido** (`{W/B/P}`): círculo dividido nas duas cores, símbolo Phyrexian centralizado.
+
+Resultado: 84 PNGs (antes: 77 placeholders). Ganho extra: cobertura de genérico numérico ampliada de 0–9 para **0–20 e 100** (o Mana já tinha esses glifos prontos) — `mana_symbols._resolve_relpath()` atualizado de acordo.
+
+### 13.4 Limpeza
+
+`assets/icons/` (a árvore de placeholders da rodada 1) foi removida por completo — confirmado por grep que nenhum código, template ou script ainda referenciava esses arquivos depois da migração (`ICONS_SVG_DIR`, usado só como checagem de existência auxiliar num caso específico de phyrexian híbrido, também foi removido do `mana_symbols.py`: ficou redundante porque `resolve_icon_png()` já confere existência real contra `assets/icons_png/`, e o gerador novo já emite as duas ordens de cor — a checagem antiga, além de redundante, estava checando o diretório errado depois da migração).
+
+### 13.5 Simplificações conscientes, documentadas
+
+- **Neve (`{S}`):** o subconjunto vendorizado do Mana não incluía um glifo dedicado de neve — usa o mesmo visual do símbolo incolor. Se isso incomodar na prática, vendorizar o glifo de neve específico do Mana é uma mudança pequena e isolada nesse script.
+- **Energia:** Mana define uma cor de fundo específica pra esse símbolo que não estava no subconjunto de variáveis consultado — usa fundo incolor por ora.
+- **Split diagonal:** aproximação geométrica simples (triângulos) do `linear-gradient(135deg)` real — visualmente muito próxima, não pixel-perfect.
+
+### 13.6 Validação realizada
+
+- Inspeção visual de uma folha de amostra (cores básicas, genérico, tap/untap, híbrido, two-brid, phyrexian) — símbolos claramente reconhecíveis como mana de MTG, grande salto de fidelidade em relação aos placeholders.
+- Render de teste completo (PIL + SVG) com notação ampliada (`{16}`, `{100}`, `{W/B/P}`, `{2/G}`) — todos resolvidos e renderizados corretamente nos dois pipelines.
+- Rotas do helper visual (`/symbols/manifest`, `/symbols/icon/<file>`) retestadas com o catálogo atualizado (64 entradas, refletindo a faixa numérica ampliada).
