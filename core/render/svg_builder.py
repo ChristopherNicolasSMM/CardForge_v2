@@ -15,12 +15,30 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional
 
+from PIL import Image, ImageDraw
+
 from ..template.models import ResolvedTemplate, Layer, LayerStyle, DEFAULT_DPI
 from .font_paths import resolve_font_dirs
+from .preview_renderer import _load_font
+from . import mana_symbols
 
 ROOT       = Path(__file__).resolve().parent.parent.parent
 FONTS_DIR  = ROOT / "assets" / "fonts"
 ICONS_DIR  = ROOT / "assets" / "icons"
+
+
+def _measure_mm(text: str, font) -> float:
+    """Largura de um texto em mm, usando as métricas reais da fonte (via
+    PIL) só para posicionar os elementos — o desenho em si continua sendo
+    vetorial (<text>), o PIL entra aqui apenas como régua."""
+    if not text:
+        return 0.0
+    draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    try:
+        px = draw.textlength(text, font=font)
+    except Exception:
+        px = len(text) * getattr(font, "size", 8) * 0.6
+    return px * 25.4 / DEFAULT_DPI
 
 
 def _escape(text: str) -> str:
@@ -195,9 +213,6 @@ class SVGBuilder:
 
     def _add_text(self, svg, layer, text, x_mm, y_mm, w_mm, h_mm) -> None:
         s = layer.style
-        font_size = f"{s.font_size_pt}pt"
-        anchor = {"left": "start", "center": "middle", "right": "end"}.get(s.align, "start")
-
         lines = text.split("\n") if layer.multiline else [text]
 
         # Alinhamento vertical: desloca a linha de base da primeira linha
@@ -212,12 +227,24 @@ class SVGBuilder:
         else:
             start_y_mm = y_mm
 
+        # Linhas sem nenhuma notação de símbolo reconhecida seguem o
+        # caminho original — um <text> com <tspan> por linha. Zero mudança
+        # de comportamento pra templates que não usam símbolos.
+        if not any(mana_symbols.has_symbols(line) for line in lines):
+            self._add_plain_text(svg, layer, lines, x_mm, start_y_mm, lh_mm)
+            return
+
+        self._add_rich_text(svg, layer, lines, x_mm, start_y_mm, w_mm, lh_mm)
+
+    def _add_plain_text(self, svg, layer, lines, x_mm, start_y_mm, lh_mm) -> None:
+        s = layer.style
+        anchor = {"left": "start", "center": "middle", "right": "end"}.get(s.align, "start")
         attrs = {
             "id":          layer.id,
             "x":           _mm(x_mm),
             "y":           _mm(start_y_mm),
             "font-family": s.font_family,
-            "font-size":   font_size,
+            "font-size":   f"{s.font_size_pt}pt",
             "font-weight": s.font_weight,
             "font-style":  s.font_style,
             "fill":        s.color,
@@ -233,6 +260,64 @@ class SVGBuilder:
             tspan = ET.SubElement(text_el, "tspan", {"x": _mm(x_mm), "dy": dy})
             tspan.text = _escape(line)
             dy = _mm(lh_mm)
+
+    def _add_rich_text(self, svg, layer, lines, x_mm, start_y_mm, w_mm, lh_mm) -> None:
+        """Variante usada quando a(s) linha(s) contêm notação `{X}` de
+        símbolo. SVG <tspan> não suporta intercalar imagens no meio do
+        fluxo de texto, então aqui cada linha vira uma sequência de
+        elementos <text> (uma por palavra) e <image> (um por símbolo),
+        posicionados explicitamente lado a lado — o PIL entra só como
+        régua pra medir a largura real da fonte (ver _measure_mm)."""
+        s = layer.style
+        font = _load_font(s.font_family, max(6, int(s.font_size_pt * DEFAULT_DPI / 72)),
+                           s.font_weight, s.font_style)
+        icon_size_mm = lh_mm * 0.85
+        space_mm = _measure_mm(" ", font)
+
+        dy_mm = 0.0
+        for li, line in enumerate(lines):
+            line_y_mm = start_y_mm + dy_mm
+            units = mana_symbols.tokenize(line)
+            widths_mm = [icon_size_mm if k == "symbol" else _measure_mm(v, font)
+                         for k, v in units]
+            total_line_mm = sum(widths_mm) + space_mm * max(0, len(units) - 1)
+
+            if s.align == "center":
+                cursor = x_mm + (w_mm - total_line_mm) / 2
+            elif s.align == "right":
+                cursor = x_mm + w_mm - total_line_mm
+            else:
+                cursor = x_mm
+
+            for wi, ((kind, val), width_mm) in enumerate(zip(units, widths_mm)):
+                if kind == "symbol":
+                    png = mana_symbols.resolve_icon_png(val)
+                    if png:
+                        b64 = _b64_file(png)
+                        # Aproxima o topo do ícone à linha de base do texto —
+                        # heurística simples, não uma medida tipográfica exata.
+                        icon_y_mm = line_y_mm - icon_size_mm * 0.78
+                        ET.SubElement(svg, "image", {
+                            "id": f"{layer.id}_sym{li}_{wi}",
+                            "x": _mm(cursor), "y": _mm(icon_y_mm),
+                            "width": _mm(icon_size_mm), "height": _mm(icon_size_mm),
+                            "href": f"data:image/png;base64,{b64}",
+                        })
+                else:
+                    t = ET.SubElement(svg, "text", {
+                        "id":          f"{layer.id}_w{li}_{wi}",
+                        "x":           _mm(cursor),
+                        "y":           _mm(line_y_mm),
+                        "font-family": s.font_family,
+                        "font-size":   f"{s.font_size_pt}pt",
+                        "font-weight": s.font_weight,
+                        "font-style":  s.font_style,
+                        "fill":        s.color,
+                    })
+                    t.text = _escape(val)
+                cursor += width_mm + space_mm
+
+            dy_mm += lh_mm
 
     # ── Helpers ─────────────────────────────────────────────────────────────
 

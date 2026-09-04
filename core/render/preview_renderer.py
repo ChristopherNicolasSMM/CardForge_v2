@@ -21,6 +21,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from ..template.models import ResolvedTemplate, Layer, LayerStyle, DEFAULT_DPI
 from .font_paths import find_font_file
+from . import mana_symbols
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -30,6 +31,7 @@ FONT_FILES = {
 }
 
 _font_cache: dict[tuple, ImageFont.FreeTypeFont] = {}
+_icon_cache: dict[tuple, Optional[Image.Image]] = {}
 
 
 def clear_font_cache() -> None:
@@ -178,6 +180,83 @@ def _wrap_text(text: str, font, max_width: int, spacing_px: int = 0) -> list[str
     return lines or [""]
 
 
+def _icon_image(png_path: Path, size_px: int) -> Optional[Image.Image]:
+    """Ícone de símbolo (mana etc.) já redimensionado, com cache em memória.
+    Reaproveita _open_image (leitura via BytesIO), então não trava arquivo
+    no Windows — mesmo cuidado já adotado no resto deste módulo."""
+    key = (str(png_path), size_px)
+    if key in _icon_cache:
+        return _icon_cache[key]
+    try:
+        img = _open_image(png_path).convert("RGBA")
+        img = img.resize((size_px, size_px), Image.LANCZOS)
+    except Exception:
+        img = None
+    _icon_cache[key] = img
+    return img
+
+
+def _wrap_rich_text(text: str, font, max_width: int, spacing_px: int,
+                     icon_size: int) -> list[list[tuple[str, str]]]:
+    """Quebra texto em linhas respeitando largura máxima em pixels, tratando
+    notação de símbolo `{X}` (estilo MTG) como uma unidade atômica do
+    tamanho de um ícone — igual uma palavra, só que com largura fixa
+    (icon_size) em vez de largura medida por fonte."""
+    units = mana_symbols.tokenize(text)
+    draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    try:
+        space_w = draw.textlength(" ", font=font)
+    except Exception:
+        space_w = getattr(font, "size", 8) * 0.3
+
+    lines: list[list[tuple[str, str]]] = []
+    current: list[tuple[str, str]] = []
+    current_w = 0.0
+    for kind, val in units:
+        uw = float(icon_size) if kind == "symbol" else _measure_text(draw, val, font, spacing_px)
+        add_w = uw + (space_w if current else 0)
+        if current and current_w + add_w > max_width:
+            lines.append(current)
+            current = [(kind, val)]
+            current_w = uw
+        else:
+            current.append((kind, val))
+            current_w += add_w
+    lines.append(current)
+    return lines or [[]]
+
+
+def _measure_rich_line(draw: ImageDraw.Draw, units: list[tuple[str, str]], font,
+                        spacing_px: int, icon_size: int, space_w: float) -> float:
+    total = 0.0
+    for i, (kind, val) in enumerate(units):
+        total += float(icon_size) if kind == "symbol" else _measure_text(draw, val, font, spacing_px)
+        if i < len(units) - 1:
+            total += space_w
+    return total
+
+
+def _draw_rich_line(draw: ImageDraw.Draw, img: Image.Image, x: float, y: float,
+                     units: list[tuple[str, str]], font, fill, spacing_px: int,
+                     icon_size: int, icon_y: float, space_w: float) -> None:
+    """Desenha uma linha mista de texto e ícones lado a lado. Símbolo sem
+    PNG resolvido (não deveria acontecer — tokenize() já filtra — mas fica
+    como rede de segurança) simplesmente não desenha nada nesse trecho, em
+    vez de quebrar o card inteiro."""
+    cx = x
+    for kind, val in units:
+        if kind == "symbol":
+            png = mana_symbols.resolve_icon_png(val)
+            icon = _icon_image(png, icon_size) if png else None
+            if icon:
+                img.paste(icon, (int(cx), int(icon_y)), icon)
+            cx += icon_size
+        else:
+            _draw_text_spaced(draw, cx, y, val, font, fill, spacing_px)
+            cx += _measure_text(draw, val, font, spacing_px)
+        cx += space_w
+
+
 def _open_image(path: Path) -> Image.Image:
     """Abre uma imagem a partir dos bytes em memória, não do caminho direto.
 
@@ -253,7 +332,7 @@ class PreviewRenderer:
         elif layer.type in ("text", "mana"):
             value = self._get_value(layer, row)
             if value:
-                self._draw_text(draw, layer, value, x, y, w, h)
+                self._draw_text(img, draw, layer, value, x, y, w, h)
 
     def _draw_background(self, img: Image.Image, layer: Layer,
                           x, y, w, h, color: str) -> None:
@@ -336,7 +415,7 @@ class PreviewRenderer:
             except Exception as e:
                 print(f"[preview] art erro: {e}")
 
-    def _draw_text(self, draw: ImageDraw.Draw, layer: Layer,
+    def _draw_text(self, img: Image.Image, draw: ImageDraw.Draw, layer: Layer,
                    text: str, x, y, w, h) -> None:
         s    = layer.style
         size_px = max(6, int(s.font_size_pt * self.preview_dpi / 72))
@@ -345,17 +424,29 @@ class PreviewRenderer:
         lh   = max(size_px + 2, int(s.line_height_resolved * self.preview_dpi / 72))
         color = _hex_to_rgba(s.color)
         spacing_px = int(round(s.letter_spacing_pt * self.preview_dpi / 72))
+        # Ícone de símbolo (notação {X}) desenhado um pouco menor que a
+        # altura da linha, pra não colar na linha de cima/baixo.
+        icon_size = max(8, int(lh * 0.85))
 
-        lines = text.split("\n") if layer.multiline else [text]
-        if layer.multiline:
-            wrapped: list[str] = []
-            for line in lines:
-                wrapped.extend(_wrap_text(line, font, w, spacing_px) if line.strip() else [""])
-            lines = wrapped
+        raw_lines = text.split("\n") if layer.multiline else [text]
+        all_lines: list[list[tuple[str, str]]] = []
+        for line in raw_lines:
+            if not line.strip():
+                all_lines.append([])
+                continue
+            if layer.multiline:
+                all_lines.extend(_wrap_rich_text(line, font, w, spacing_px, icon_size))
+            else:
+                all_lines.append(mana_symbols.tokenize(line))
+
+        try:
+            space_w = draw.textlength(" ", font=font)
+        except Exception:
+            space_w = getattr(font, "size", 8) * 0.3
 
         # Alinhamento vertical: posiciona o bloco de texto (todas as linhas)
         # dentro da caixa da camada, conforme "topo" (padrão) / "centro" / "base".
-        total_h = len(lines) * lh
+        total_h = len(all_lines) * lh
         if s.vertical_align == "middle":
             y_off = y + max(0, (h - total_h) // 2)
         elif s.vertical_align == "bottom":
@@ -363,13 +454,13 @@ class PreviewRenderer:
         else:
             y_off = y
 
-        for line in lines:
+        for units in all_lines:
             if y_off + lh > y + h + lh:
                 break
-            if not line.strip():
+            if not units:
                 y_off += lh
                 continue
-            tw = _measure_text(draw, line, font, spacing_px)
+            tw = _measure_rich_line(draw, units, font, spacing_px, icon_size, space_w)
 
             if s.align == "center":
                 tx = x + (w - tw) // 2
@@ -378,7 +469,9 @@ class PreviewRenderer:
             else:
                 tx = x
 
-            _draw_text_spaced(draw, tx, y_off, line, font, color, spacing_px)
+            icon_y = y_off + max(0, (lh - icon_size) // 2)
+            _draw_rich_line(draw, img, tx, y_off, units, font, color,
+                             spacing_px, icon_size, icon_y, space_w)
             y_off += lh
 
     @staticmethod

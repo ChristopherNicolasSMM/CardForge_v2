@@ -2,7 +2,7 @@
 
 **Projeto:** CardForge 2.0
 **Escopo:** Extensão do motor de renderização para suportar notação de símbolos inline (`{W}`, `{T}`, `{2/R}` etc.) e seleção de moldura ("frame") por campo de dado, inspirado no fluxo de cartas de Magic: The Gathering.
-**Status:** Mapeamento concluído — pendente de validação empírica de algumas premissas antes da implementação.
+**Status:** Symbol Replacement Engine implementado (preview PIL + export SVG) e validado com render de teste. Ver seção 11.
 **Origem da análise:** Estudo do repositório `mtg_card_maker` (Ruby, fork de joe-sharp) como referência de arquitetura, e do projeto `Mana` (andrewgioia/mana) como fonte de assets.
 
 ---
@@ -110,7 +110,7 @@ Assumido (por analogia ao comportamento já conhecido de campos de texto não ma
 
 **Decisão:** não implementar lógica de fallback (`frame_default.png`) no engine. A robustez fica a cargo da preparação dos dados — a coluna `frame_asset` deve sempre ser preenchida com um valor válido antes da geração.
 
-**⚠️ Pendência de validação:** essa suposição é por analogia com o comportamento de campo de texto, e **não foi confirmada empiricamente** para camada de imagem. Antes de considerar esse item definitivamente fechado, recomenda-se um teste rápido: subir um dataset de teste com um valor de `frame_asset` propositalmente inválido e observar se o comportamento é (a) renderização sem a camada (comportamento assumido, nenhuma ação necessária) ou (b) exceção/erro que interrompe a geração (nesse caso, um `try/except` simples com fallback silencioso passaria a ser necessário).
+**✅ Validado por leitura de código (não apenas por analogia):** em `core/render/preview_renderer.py::_resolve_asset_path` e no equivalente em `svg_builder.py`, quando o valor do campo não corresponde a nenhum arquivo em nenhum dos locais de busca, a função retorna `None` e `_draw_image`/`_add_image` simplesmente fazem `return` sem desenhar nada — não há `raise` em nenhum ponto desse caminho. Confirmado: comportamento (a), como assumido. Nenhuma mudança de engine necessária.
 
 ---
 
@@ -145,17 +145,56 @@ Nova página em `docs/` (ex: `docs/simbolos-mana.md`), renderizada pelo sistema 
 | Symbol Replacement Engine (desenho) | ✅ Fechado |
 | Frame por cor via campo de dado | ✅ Fechado — sem mudança de engine |
 | Duplicação de assets entre templates | ✅ Aceita conscientemente |
-| Fallback de frame ausente | ⚠️ Assumido por analogia — validar empiricamente antes da implementação |
-| Helper visual no editor | ✅ Fechado — a implementar |
-| Página de documentação no wiki | ✅ Fechado — a implementar |
+| Fallback de frame ausente | ✅ Confirmado por leitura de código — nenhuma exceção, silencioso |
+| Helper visual no editor | ⏳ Ainda não implementado — fora do escopo desta rodada |
+| Página de documentação no wiki | ✅ Implementado — `docs/09-simbolos-mana.md` |
 
 ---
 
 ## 10. Próximos passos sugeridos (fora do escopo deste documento)
 
-1. Validar empiricamente o comportamento de campo de imagem não correspondente (seção 5.5).
-2. Confirmar, no código-fonte do CardForge_v2, a rotina exata de resolução de path de asset por campo — e se é a mesma envolvida no bug da biblioteca de imagens.
-3. Gerar os PNGs de símbolos via Playwright a partir da fonte Mana.
-4. Implementar o Symbol Replacement Engine no `core/`.
-5. Implementar o helper visual no editor de template.
-6. Escrever a página de wiki.
+1. ~~Validar empiricamente o comportamento de campo de imagem não correspondente~~ — feito, ver seção 5.5.
+2. ~~Confirmar a rotina exata de resolução de path de asset por campo~~ — feito, ver seção 11.2: é a mesma rotina do bug da biblioteca de imagens, em ambos os renderers.
+3. Substituir os PNGs placeholder pelos ícones reais do projeto Mana (rasterizados via `scripts/generate_mana_icons.py` a partir de SVGs equivalentes aos do Mana, ou adaptando o script pra rasterizar a fonte diretamente).
+4. Implementar o helper visual no editor de template.
+5. ~~Escrever a página de wiki~~ — feito, `docs/09-simbolos-mana.md`.
+6. Investigar e corrigir o bug de unidades encontrado em `svg_builder.py` (seção 11.3) — não bloqueia esta feature, mas afeta a qualidade do export SVG de forma geral.
+
+---
+
+## 11. Registro de implementação (esta rodada)
+
+### 11.1 O que foi confirmado no código antes de implementar
+
+- O tipo de layer `"mana"` já existia no modelo (`core/template/models.py`), mas nenhum template o instanciava — o gancho estava pronto e sem uso.
+- Já existia uma pasta global `assets/icons/` (fora de `collections/`) com ~90 SVGs, incluindo `hybrid/` e `phyrexian/` já estruturados por nome de cor por extenso (ex: `white-black.svg`). Inspeção do conteúdo mostrou que **não são os símbolos reais de mana** — são ícones placeholder (estilo Google Material Symbols; `W.svg` e `white.svg` têm o mesmo path de glifo). Zero risco de licença herdado daí, mas também zero autenticidade visual — confirma a necessidade da troca planejada pelos ícones do Mana (seção 3).
+- O projeto **não tem nenhuma dependência de rasterização de SVG** (`cairosvg`, `svglib` etc.) em `requirements.txt` — confirma a decisão da seção 2.1 (nada de SVG em runtime).
+
+### 11.2 O que foi implementado
+
+- `core/render/mana_symbols.py` — parser de notação `{X}` → caminho de PNG, com fallback textual para notação não reconhecida.
+- `scripts/generate_mana_icons.py` — rasteriza `assets/icons/**/*.svg` → `assets/icons_png/` (mesma árvore de pastas). Rodado uma vez nesta rodada; os PNGs resultantes foram versionados.
+- `core/render/preview_renderer.py` — `_draw_text` reescrito para tratar linhas como sequência de unidades (palavra ou símbolo), com símbolo entrando no cálculo de quebra de linha como unidade atômica do tamanho do ícone.
+- `core/render/svg_builder.py` — `_add_text` agora detecta se a linha contém símbolo reconhecido; se não, usa exatamente o caminho antigo (`<text>` + `<tspan>` por linha, zero mudança de comportamento); se sim, usa um novo caminho (`_add_rich_text`) que emite `<text>` por palavra e `<image>` por símbolo, posicionados explicitamente — porque `<tspan>` não suporta intercalar imagem no meio do fluxo. A medição de largura de palavra usa `PIL` apenas como régua (mesmo mecanismo de fonte do preview), sem gerar nenhum raster no output final.
+- `docs/09-simbolos-mana.md` — página de wiki com a tabela de notação.
+
+### 11.3 Achado à parte, fora do escopo desta feature
+
+Durante o teste de validação (renderizar um card de exemplo com `SVGBuilder`), foi observado que o texto de `card_name` — que não usa nenhuma notação de símbolo e passa pelo caminho de renderização original, inalterado — aparece desproporcionalmente grande no SVG exportado. A causa aparente é um descompasso de unidades entre `font-size` (especificado em `pt`) e o sistema de coordenadas do `viewBox` (em `mm`, sem conversão explícita). Confirmado que **não é uma regressão desta implementação** (reproduz com texto puro, sem nenhum símbolo envolvido, no caminho de código que não foi tocado). Registrado aqui para virar um item de investigação separado — não foi corrigido nesta rodada para não misturar escopos.
+
+### 11.4 Limpeza de assets não utilizados
+
+Após implementar a engine, foi feita uma auditoria em `assets/icons/` (grep por todo o repositório — código, templates, JS, configs — sem depender só de leitura visual) pra confirmar quais dos 87 arquivos originais são de fato resolvidos por `mana_symbols.py`. 10 arquivos não tinham nenhuma referência em lugar nenhum e foram removidos (de `assets/icons/` e dos PNGs correspondentes em `assets/icons_png/`):
+
+- `white.svg`, `black.svg`, `blue.svg`, `red.svg`, `green.svg` — duplicados por extenso dos arquivos de letra (`W.svg` etc.), que são os efetivamente resolvidos pela notação.
+- `single-digit.svg`, `double-digit.svg` — continham números de exemplo fixos ("3", "16"); a engine usa os arquivos individuais `0.svg`...`9.svg`.
+- `tap_legacy.svg` — só `tap.svg` é referenciado.
+- `cardforge.ico`, `cardforge.png` — cópias soltas do ícone do app, sem relação com símbolos de mana; o favicon real vem de `web/static/favicon*`.
+
+Não foi encontrado nenhum `glob`/`listdir` dinâmico sobre a pasta em nenhuma rota ou template, então a remoção não afeta nenhuma listagem automática de ícones. `assets/icons/` e `assets/icons_png/` ficaram com exatamente 77 arquivos cada, em correspondência 1:1.
+
+### 11.5 Validação realizada
+
+Renderização de teste com `mana_cost="{3}{U}{R}"` e `rules_text` contendo `{T}`, `{W}`, `{U}`, `{2/R}`, via `_default_template`:
+- **Preview PIL:** símbolos aparecem inline, quebra de linha respeita o símbolo como unidade atômica, texto sem símbolo continua idêntico ao comportamento anterior.
+- **Export SVG:** 7 elementos `<image>` embutidos corretamente para os símbolos usados; ressalva da seção 11.3 quanto ao tamanho do texto (não relacionado aos símbolos em si).
