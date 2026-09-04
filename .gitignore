@@ -6,3 +6,8 @@ instance/
 collections/*/output/
 *.egg-info/
 .DS_Store
+
+# Build do executável (PyInstaller) — gerado localmente ou via CI, nunca
+# versionado. Ver docs/tech/doc-tecnico-executavel.md.
+/build/
+/dist/

@@ -1,0 +1,68 @@
+name: Build do executável
+
+# Roda quando uma tag de versão é publicada (ex: v2.1.0) e também pode
+# ser disparado manualmente (aba Actions > Build do executável > Run
+# workflow) — útil pra testar o build sem precisar criar uma tag.
+#
+# Hoje builda só Windows (decisão registrada em
+# docs/tech/doc-tecnico-executavel.md). Adicionar macOS/Linux depois é
+# só duplicar o job trocando "windows-latest" por "macos-latest" /
+# "ubuntu-latest" na matriz abaixo — o spec do PyInstoller já é
+# multiplataforma, não precisa mudar nada nele.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        os: [windows-latest]
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configura Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instala dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Gera os ícones de mana
+        # assets/icons_png/ já vem versionado no repositório (ver
+        # docs/tech/doc-tecnico-mtg-symbols-frames.md), então isso normalmente
+        # é redundante -- mas roda mesmo assim como salvaguarda, caso os PNGs
+        # não estejam presentes por algum motivo (ex: checkout parcial).
+        run: |
+          if (-not (Test-Path "assets/icons_png/W.png")) {
+            pip install cairosvg
+            python scripts/generate_mana_icons.py
+          }
+        shell: pwsh
+
+      - name: Build (PyInstaller)
+        run: pyinstaller cardforge.spec --noconfirm
+
+      - name: Empacota em .zip
+        run: Compress-Archive -Path dist/CardForge -DestinationPath CardForge-windows.zip
+        shell: pwsh
+
+      - name: Sobe como artifact (toda execução)
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardForge-windows
+          path: CardForge-windows.zip
+
+      - name: Anexa ao release (só em tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: CardForge-windows.zip

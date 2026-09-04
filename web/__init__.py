@@ -4,13 +4,17 @@ from pathlib import Path
 from flask import Flask, g, request, redirect, url_for, flash
 
 from .config import Config
+from core.paths import resource_root
 
 # Blueprints que não dependem de uma coleção ativa — sempre acessíveis.
 _COLLECTION_EXEMPT_BLUEPRINTS = {"wiki_bp", "collections_bp", "main", "static", None}
 
 
 def create_app() -> Flask:
-    web_dir = Path(__file__).resolve().parent
+    # web/templates e web/static são recurso empacotado (read-only) — usa
+    # resource_root() em vez de Path(__file__), que não é confiável sob
+    # execução empacotada (ver core/paths.py).
+    web_dir = resource_root() / "web"
     app = Flask(
         __name__,
         template_folder=str(web_dir / "templates"),

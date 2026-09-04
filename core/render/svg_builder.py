@@ -21,10 +21,10 @@ from ..template.models import ResolvedTemplate, Layer, LayerStyle, DEFAULT_DPI
 from .font_paths import resolve_font_dirs
 from .preview_renderer import _load_font
 from . import mana_symbols
+from ..paths import resource_root
 
-ROOT       = Path(__file__).resolve().parent.parent.parent
+ROOT       = resource_root()
 FONTS_DIR  = ROOT / "assets" / "fonts"
-ICONS_DIR  = ROOT / "assets" / "icons"
 
 
 def _measure_mm(text: str, font) -> float:

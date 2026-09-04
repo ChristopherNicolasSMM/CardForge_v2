@@ -46,6 +46,10 @@ Não é um app fechado, não exige conta, não trava seu trabalho atrás de payw
 
 ## Início rápido
 
+**Não é dev? Não precisa instalar Python.** Baixe o executável Windows pronto na aba [Releases](https://github.com/ChristopherNicolasSMM/CardForge_v2/releases) — descompacte o `.zip`, abra `CardForge.exe`, e o navegador abre sozinho. Todos os seus dados (coleções, templates, cards gerados) ficam numa pasta ao lado do executável — mova a pasta inteira pra fazer backup ou levar pra outra máquina. Detalhes de arquitetura em `docs/tech/doc-tecnico-executavel.md`.
+
+**Rodando a partir do código-fonte** (Windows, Mac ou Linux):
+
 ```bash
 git clone https://github.com/ChristopherNicolasSMM/CardForge_v2.git
 cd CardForge_v2
@@ -153,21 +157,33 @@ cardforge2/
 ├── core/                     ← motor de renderização (sem nenhuma dependência de UI)
 │   ├── template/               → modelos, herança, carregar/salvar template
 │   ├── data/                   → leitura de CSV/XLSX/YAML/JSON
-│   ├── render/                 → preview PIL, SVG builder, export raster, resolução de fontes
-│   └── proxy/                  → composição de folha + PDF
+│   ├── render/                 → preview PIL, SVG builder, export raster, resolução de fontes, símbolos de mana
+│   ├── proxy/                  → composição de folha + PDF
+│   └── paths.py                → raiz de recursos vs. raiz de dados (fonte-código x executável empacotado)
 │
 ├── web/                      ← camada Flask
-│   ├── routes/                  → blueprints: hub, coleções, templates, dados, gerar, proxy, wiki
+│   ├── routes/                  → blueprints: hub, coleções, templates, dados, gerar, proxy, wiki, símbolos
 │   ├── services/                 → coleções, upload de assets, dataset
 │   ├── templates/                → HTML (Jinja2)
-│   └── static/                   → CSS + JS (editor de canvas, tabela de dados)
+│   └── static/                   → CSS + JS (editor de canvas, tabela de dados, paleta de símbolos)
 │
 ├── collections/                ← cada coleção (jogo, ou atualização de jogo) é uma pasta aqui
 ├── assets/fonts/                ← fontes embutidas no CardForge (globais, todas as coleções)
+├── assets/icons_png/            ← ícones de símbolo de mana, prontos (ver docs/tech)
 ├── docs/                        ← manuais em .md, exibidos em /wiki
+│   └── tech/                      → documentos técnicos de arquitetura (não aparecem na wiki)
 ├── requirements.txt
-└── run.py
+├── requirements-build.txt       ← só pra gerar o executável (pyinstaller)
+├── cardforge.spec               ← spec do PyInstaller
+├── desktop_launcher.py          ← entry point do executável empacotado
+└── run.py                       ← entry point rodando a partir do código-fonte
 ```
+
+---
+
+## Executável (Windows)
+
+Gerado automaticamente via GitHub Actions a cada release (`.github/workflows/build-executable.yml`), buildado numa máquina Windows real — não é cross-compilation. Os dados do usuário (coleções, cards gerados) ficam sempre numa pasta ao lado do `.exe`, tornando a instalação inteira portátil. Arquitetura completa, decisões e validação em `docs/tech/doc-tecnico-executavel.md`.
 
 ---
 

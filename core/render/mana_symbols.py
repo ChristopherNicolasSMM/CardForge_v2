@@ -19,8 +19,9 @@ import re
 from pathlib import Path
 from typing import Optional
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-ICONS_PNG_DIR = ROOT / "assets" / "icons_png"
+from .. import paths as _paths
+
+ICONS_PNG_DIR = _paths.resource_root() / "assets" / "icons_png"
 
 # Letra de notação -> nome de cor por extenso, usado para montar os caminhos
 # dentro de hybrid/ e phyrexian/ (que usam nomes completos, ex: "white-black.svg").

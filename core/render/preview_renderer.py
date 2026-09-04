@@ -23,8 +23,6 @@ from ..template.models import ResolvedTemplate, Layer, LayerStyle, DEFAULT_DPI
 from .font_paths import find_font_file
 from . import mana_symbols
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-
 # Aliases legados — nomes de fonte que não seguem "<nome_do_arquivo_sem_ttf>"
 FONT_FILES = {
     "Beleren": "Beleren-Bold",

@@ -43,7 +43,9 @@ DEFAULT_GRADIENTS = {
     "artifact":  {"stops": [["0%","#C8C8C8"],["100%","#909090"]]},
 }
 
-ROOT = Path(__file__).resolve().parent.parent.parent   # raiz do projeto (cardforge2/)
+from ..paths import data_root
+
+ROOT = data_root()   # raiz de dados do usuário — ver core/paths.py
 
 # ── Raiz de templates "ativa" ────────────────────────────────────────────────
 # Por padrão os templates ficam em <raiz do projeto>/templates. Mas o CardForge

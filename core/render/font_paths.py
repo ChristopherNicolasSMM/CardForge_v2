@@ -14,9 +14,11 @@ from __future__ import annotations
 import contextvars
 from pathlib import Path
 
-ROOT           = Path(__file__).resolve().parent.parent.parent
-BUILTIN_FONTS  = ROOT / "assets" / "fonts"          # embutidas, sempre globais
-_DEFAULT_CUSTOM_FONTS = ROOT / "assets" / "fonts_custom"
+from ..paths import resource_root, data_root
+
+ROOT           = resource_root()
+BUILTIN_FONTS  = ROOT / "assets" / "fonts"          # embutidas, sempre globais, read-only
+_DEFAULT_CUSTOM_FONTS = data_root() / "assets" / "fonts_custom"
 
 # Assim como a raiz de templates, a pasta de fontes customizadas é
 # escopada por Coleção — veja core/template/loader.py para a explicação
