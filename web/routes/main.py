@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from flask import Blueprint, render_template, g
+from flask import Blueprint, render_template, g, jsonify, send_from_directory
 
 from core.template.loader import list_templates
+from core.render import mana_symbols
 from web.services import session_data as sd
 from web.services import collections
 
@@ -29,3 +30,18 @@ def hub():
         row_count=len(dataset["rows"]),
         batch_count=batch_count,
     )
+
+
+# ── Símbolos de mana (notação {X}) ──────────────────────────────────────────
+# Globais, independentes de coleção — mesmo catálogo pra qualquer template.
+# Usado pelo helper visual do editor e da tela de Dados (ver
+# web/static/js/symbol-picker.js). Ver docs/09-simbolos-mana.md.
+
+@bp.route("/symbols/manifest")
+def symbols_manifest():
+    return jsonify(mana_symbols.catalog())
+
+
+@bp.route("/symbols/icon/<path:filename>")
+def symbols_icon(filename):
+    return send_from_directory(mana_symbols.ICONS_PNG_DIR, filename)

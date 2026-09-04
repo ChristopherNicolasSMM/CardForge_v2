@@ -146,7 +146,7 @@ Nova página em `docs/` (ex: `docs/simbolos-mana.md`), renderizada pelo sistema 
 | Frame por cor via campo de dado | ✅ Fechado — sem mudança de engine |
 | Duplicação de assets entre templates | ✅ Aceita conscientemente |
 | Fallback de frame ausente | ✅ Confirmado por leitura de código — nenhuma exceção, silencioso |
-| Helper visual no editor | ⏳ Ainda não implementado — fora do escopo desta rodada |
+| Helper visual no editor | ✅ Implementado — ver seção 12 |
 | Página de documentação no wiki | ✅ Implementado — `docs/09-simbolos-mana.md` |
 
 ---
@@ -218,3 +218,29 @@ Como a posição de cada palavra é calculada via PIL usando a fonte real (Beler
 Renderização de teste com `mana_cost="{3}{U}{R}"` e `rules_text` contendo `{T}`, `{W}`, `{U}`, `{2/R}`, via `_default_template`:
 - **Preview PIL:** símbolos aparecem inline, quebra de linha respeita o símbolo como unidade atômica, texto sem símbolo continua idêntico ao comportamento anterior.
 - **Export SVG:** card inteiro visível e nas posições corretas após a correção da seção 11.5; símbolos embutidos corretamente; palavras não se sobrepõem mais após a mitigação da seção 11.6. Ressalva de tipografia (fonte de fallback nas ferramentas de teste locais) documentada na mesma seção — recomenda-se conferir num navegador real antes de considerar o export SVG 100% validado tipograficamente.
+
+## 12. Helper visual (paleta de símbolos) — registro de implementação
+
+Terceira rodada desta feature. Implementa o item que ficava pendente desde a seção 6.
+
+### 12.1 Desenho
+
+- **Backend:** `mana_symbols.catalog()` — lista curada (52 entradas: cores, genérico/especiais, híbrido, two-brid, phyrexian, phyrexian híbrido), cada uma só incluída se o PNG correspondente existir de fato (evita a paleta oferecer algo que a engine não consegue resolver). Duas rotas novas em `web/routes/main.py` (globais, fora de qualquer coleção, consistente com `assets/icons_png/` ser um recurso global): `GET /symbols/manifest` (JSON do catálogo) e `GET /symbols/icon/<path:filename>` (serve os PNGs).
+- **Frontend:** `web/static/js/symbol-picker.js` — popover genérico, agnóstico de onde vai inserir o texto. Expõe `CF_openSymbolPicker(anchorEl, onPick)`; quem chama decide como inserir.
+- **Dois pontos de integração**, cada um com sua própria lógica de inserção porque os campos são de tipos diferentes:
+  - Tela de **Dados** (`data-table.js`): células são `<td contenteditable>`, não `<input>`. Foi necessário rastrear a célula com foco e o `Range` do cursor nela (via `focusin`/`selectionchange`), porque clicar no botão da paleta tira o foco da célula antes de inserir. Ao inserir, dispara o evento `input` na célula pra reaproveitar a sincronização já existente com `rows[][]` e o auto-save — sem duplicar essa lógica.
+  - Editor de template (`editor.js`), campo "Texto fixo" (`p_static`): é um `<input>` normal, então usa `selectionStart`/`selectionEnd` padrão — bem mais simples. Também dispara `input` pra reaproveitar o `bindProp` já existente.
+- Botão da paleta usa 🔮 como ícone (emoji, sem dependência de asset extra) e a classe `.symbol-picker-trigger`, com CSS novo em `app.css` seguindo os tokens de cor já usados no resto do projeto (`--iron`, `--iron-line`, `--ember` etc.).
+
+### 12.2 O que fica de fora, conscientemente
+
+- O helper ajuda a inserir a notação em **texto fixo** de template (`p_static`) e em **células de dado** (tela Dados). Não foi adicionado ao campo "Campo do dataset" (`p_field`), porque esse campo guarda o *nome da coluna*, não o conteúdo — não faz sentido inserir um ícone ali.
+- A paleta não filtra por relevância de campo (ex: não esconde símbolos "incomuns" fora de `rules_text`) — mostra o catálogo inteiro sempre. Simplicidade deliberada; poderia ganhar contexto no futuro se isso incomodar na prática.
+
+### 12.3 Validação realizada
+
+- `mana_symbols.catalog()` retorna 52 entradas, todas com PNG confirmado.
+- Rotas testadas via `Flask test_client`: `/symbols/manifest` → 200, JSON com 52 itens; `/symbols/icon/<file>` → 200, `image/png`.
+- Sintaxe JS validada nos três arquivos (`symbol-picker.js`, `data-table.js`, `editor.js`) via Node.
+- Fluxo completo testado via `test_client`: criar coleção → página Dados carrega com `btnInsertSymbol` e `symbol-picker.js` presentes → criar template → página do editor carrega com `btnInsertSymbolStatic` e `symbol-picker.js` presentes.
+- **Não testado nesta rodada:** interação real de clique no navegador (o `test_client` confirma que HTML/rotas/JS estão corretos e presentes, mas não substitui abrir de fato e clicar). Recomenda-se um teste manual rápido antes de considerar 100% fechado.

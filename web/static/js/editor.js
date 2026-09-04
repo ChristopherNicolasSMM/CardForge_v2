@@ -592,6 +592,27 @@
   bindProp("p_label", (l, el) => l.label = el.value);
   bindProp("p_field", (l, el) => l.field = el.value);
   bindProp("p_static", (l, el) => l.static_text = el.value);
+
+  // Paleta de símbolos pro campo "Texto fixo" — insere na posição do
+  // cursor do <input> e dispara "input" pra reaproveitar o bindProp acima
+  // (sem duplicar a lógica de sync com o modelo da camada).
+  const btnInsertSymbolStatic = document.getElementById("btnInsertSymbolStatic");
+  if (btnInsertSymbolStatic) {
+    btnInsertSymbolStatic.addEventListener("click", () => {
+      const input = P("p_static");
+      window.CF_openSymbolPicker(btnInsertSymbolStatic, notation => {
+        const token = `{${notation}}`;
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? input.value.length;
+        input.value = input.value.slice(0, start) + token + input.value.slice(end);
+        const caret = start + token.length;
+        input.focus();
+        input.setSelectionRange(caret, caret);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    });
+  }
+
   bindProp("p_x", (l, el) => l.x_mm = parseFloat(el.value) || 0);
   bindProp("p_y", (l, el) => l.y_mm = parseFloat(el.value) || 0);
   bindProp("p_w", (l, el) => l.width_mm = parseFloat(el.value) || 1);

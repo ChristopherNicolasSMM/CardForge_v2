@@ -89,7 +89,10 @@
             </div>
             <div class="field" id="p_staticWrap">
               <label>Texto fixo</label>
-              <input type="text" id="p_static">
+              <div class="row gap-sm">
+                <input type="text" id="p_static" style="flex:1">
+                <button type="button" class="btn btn-sm symbol-picker-trigger" id="btnInsertSymbolStatic" title="Inserir símbolo de mana">🔮</button>
+              </div>
             </div>
             <div class="field" id="p_fixedImageWrap" style="display:none">
               <label>Imagem fixa (usada quando o campo do dataset está vazio)</label>
@@ -220,5 +223,6 @@
       layerImage: "{{ url_for('templates_bp.upload_layer_image', name=name) }}",
     };
   </script>
+  <script src="{{ url_for('static', filename='js/symbol-picker.js') }}"></script>
   <script src="{{ url_for('static', filename='js/editor.js') }}"></script>
 {% endblock %}

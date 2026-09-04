@@ -103,6 +103,51 @@ def has_symbols(text: str) -> bool:
                for m in _TOKEN_RE.finditer(text))
 
 
+def catalog() -> list[dict]:
+    """Lista curada de notações pra UI (helper visual no editor/dados) —
+    cada entrada só entra se o PNG correspondente já existir de fato.
+    Não é uma enumeração exaustiva de toda combinação matematicamente
+    possível, é a que faz sentido oferecer numa paleta."""
+    entries: list[tuple[str, str, str]] = []  # (categoria, notação, rótulo)
+
+    entries += [
+        ("Cores", "W", "Branco"), ("Cores", "U", "Azul"), ("Cores", "B", "Preto"),
+        ("Cores", "R", "Vermelho"), ("Cores", "G", "Verde"),
+        ("Cores", "C", "Incolor"), ("Cores", "S", "Neve"),
+    ]
+    entries += [
+        ("Genérico e especiais", str(n), str(n)) for n in range(10)
+    ]
+    entries += [
+        ("Genérico e especiais", "X", "X"),
+        ("Genérico e especiais", "T", "Ativar (tap)"),
+        ("Genérico e especiais", "Q", "Desativar (untap)"),
+        ("Genérico e especiais", "E", "Energia"),
+    ]
+    for a, b in [("W", "U"), ("W", "B"), ("W", "R"), ("W", "G"), ("U", "B"),
+                 ("U", "R"), ("U", "G"), ("B", "R"), ("B", "G"), ("R", "G")]:
+        entries.append(("Híbrido", f"{a}/{b}", f"{a}/{b} híbrido"))
+    for c in ["W", "U", "B", "R", "G"]:
+        entries.append(("Two-brid", f"2/{c}", f"2/{c}"))
+    for c in ["W", "U", "B", "R", "G", "C"]:
+        entries.append(("Phyrexian", f"{c}/P", f"{c} phyrexian"))
+    for a, b in [("W", "B"), ("W", "R"), ("W", "G"), ("W", "U"), ("B", "R"),
+                 ("B", "G"), ("B", "U"), ("R", "G"), ("R", "U"), ("G", "U")]:
+        entries.append(("Phyrexian híbrido", f"{a}/{b}/P", f"{a}/{b} phyrexian"))
+
+    out = []
+    for category, notation, display_label in entries:
+        png = resolve_icon_png(notation)
+        if png is not None:
+            out.append({
+                "category": category,
+                "notation": notation,
+                "label": display_label,
+                "file": str(png.relative_to(ICONS_PNG_DIR)),
+            })
+    return out
+
+
 def tokenize(text: str) -> list[tuple[str, str]]:
     """Separa o texto em unidades ('word', texto) e ('symbol', notação),
     preservando a ordem. Notação sem ícone correspondente vira

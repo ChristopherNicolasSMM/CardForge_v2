@@ -28,6 +28,7 @@
       <div class="row gap-sm">
         <input type="text" id="newColName" placeholder="nome da nova coluna" style="width:160px; background:var(--iron); border:1px solid var(--iron-line); color:var(--parchment); padding:6px 8px; border-radius:3px; font-size:.8rem;">
         <button class="btn btn-sm" id="btnAddCol">+ Coluna</button>
+        <button class="btn btn-sm symbol-picker-trigger" id="btnInsertSymbol" type="button" title="Inserir símbolo de mana no campo de texto selecionado">🔮 Símbolo</button>
         <button class="btn btn-sm btn-primary" id="btnAddRow">+ Card</button>
       </div>
     </div>
@@ -79,5 +80,6 @@
       sel.innerHTML = list.map(n => `<option value="${n}">${n}</option>`).join('') || '<option value="">— nenhum template —</option>';
     });
   </script>
+  <script src="{{ url_for('static', filename='js/symbol-picker.js') }}"></script>
   <script src="{{ url_for('static', filename='js/data-table.js') }}"></script>
 {% endblock %}

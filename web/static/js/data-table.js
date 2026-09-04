@@ -164,6 +164,57 @@
 
   document.getElementById("btnSaveData").addEventListener("click", () => saveData(false));
 
+  // ── Paleta de símbolos (helper de notação {X}) ──────────────────────────
+  // Célula contenteditable não é um <input>/<textarea> normal — não dá pra
+  // simplesmente ler/escrever selectionStart. Guardamos a célula com foco e
+  // o Range do cursor nela; ao clicar num ícone da paleta (o que tira o
+  // foco da célula), restauramos esse Range antes de inserir o texto.
+  let lastEditableCell = null;
+  let lastCaretRange = null;
+
+  document.addEventListener("focusin", evt => {
+    if (evt.target.matches && evt.target.matches("td[contenteditable]")) {
+      lastEditableCell = evt.target;
+    }
+  });
+  document.addEventListener("selectionchange", () => {
+    if (!lastEditableCell || document.activeElement !== lastEditableCell) return;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && lastEditableCell.contains(sel.anchorNode)) {
+      lastCaretRange = sel.getRangeAt(0).cloneRange();
+    }
+  });
+
+  const btnInsertSymbol = document.getElementById("btnInsertSymbol");
+  if (btnInsertSymbol) {
+    btnInsertSymbol.addEventListener("click", () => {
+      if (!lastEditableCell) {
+        alert("Clique num campo de texto da tabela primeiro (ex: rules_text), pra eu saber onde inserir o símbolo.");
+        return;
+      }
+      window.CF_openSymbolPicker(btnInsertSymbol, notation => {
+        const cell = lastEditableCell;
+        cell.focus();
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        if (lastCaretRange && cell.contains(lastCaretRange.startContainer)) {
+          sel.addRange(lastCaretRange);
+        } else {
+          // sem posição salva (ex: célula nunca teve o cursor ainda) —
+          // insere no fim do conteúdo, nunca no meio às cegas.
+          const r = document.createRange();
+          r.selectNodeContents(cell);
+          r.collapse(false);
+          sel.addRange(r);
+        }
+        document.execCommand("insertText", false, `{${notation}}`);
+        // Reaproveita o listener de "input" já existente pra sincronizar
+        // rows[][] e disparar o auto-save — sem duplicar essa lógica aqui.
+        cell.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    });
+  }
+
   // ── Picker de imagens (biblioteca de assets) ────────────────────────────
 
   window.CF_pickArt = function (rowIndex) {
