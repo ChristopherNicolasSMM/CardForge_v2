@@ -41,6 +41,26 @@ def _measure_mm(text: str, font) -> float:
     return px * 25.4 / DEFAULT_DPI
 
 
+def _merge_word_runs(units: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Agrupa unidades ('word', ...) consecutivas de tokenize() num único
+    trecho de texto corrido, unidas por espaço — pra virar um <text> só em
+    vez de um por palavra. Unidades ('symbol', ...) continuam separadas.
+    Ex: [('word','Add'), ('word','your')] -> [('word','Add your')]."""
+    runs: list[tuple[str, str]] = []
+    buf: list[str] = []
+    for kind, val in units:
+        if kind == "word":
+            buf.append(val)
+        else:
+            if buf:
+                runs.append(("word", " ".join(buf)))
+                buf = []
+            runs.append((kind, val))
+    if buf:
+        runs.append(("word", " ".join(buf)))
+    return runs
+
+
 def _escape(text: str) -> str:
     return (text
             .replace("&", "&amp;")
@@ -75,7 +95,33 @@ def _font_css(fonts_dirs: list[Path]) -> str:
 
 
 def _mm(val: float) -> str:
+    """Tamanho físico com sufixo de unidade — usar SOMENTE para o
+    width/height do elemento <svg> raiz (que define o tamanho real de
+    impressão do documento)."""
     return f"{round(val, 3)}mm"
+
+
+PT_TO_MM = 25.4 / 72
+
+
+def _u(val: float) -> str:
+    """Coordenada em 'unidade de usuário' do SVG — um número puro, SEM
+    sufixo de unidade.
+
+    Importante: o viewBox deste documento é declarado com números que
+    numericamente equivalem aos milímetros do card (ex:
+    viewBox="0 0 63.0 88.0" para um card de 63×88mm) — ou seja, 1 unidade
+    de usuário == 1mm, por convenção deste projeto, não por regra do SVG.
+
+    Um valor com sufixo de unidade explícito (ex: "10mm" ou "10pt") NÃO
+    respeita essa convenção: o SVG resolve unidades absolutas (mm, pt, in,
+    cm) usando a referência fixa de 96 px por polegada, independente do
+    viewBox — então "10mm" vira ~37.8 unidades de usuário (10 × 96/25.4),
+    não 10. Isso deslocava qualquer elemento posicionado a mais de ~15mm
+    da origem para fora da área visível do card (confirmado
+    empiricamente — ver docs/tech/doc-tecnico-mtg-symbols-frames.md,
+    seção 11.3/12). A correção é sempre emitir número puro aqui."""
+    return str(round(val, 3))
 
 
 class SVGBuilder:
@@ -149,10 +195,10 @@ class SVGBuilder:
 
     def _add_layer(self, svg: ET.Element, layer: Layer,
                    row: dict, color: str) -> None:
-        x  = _mm(layer.x_mm)
-        y  = _mm(layer.y_mm)
-        w  = _mm(layer.width_mm)
-        h  = _mm(layer.height_mm)
+        x  = _u(layer.x_mm)
+        y  = _u(layer.y_mm)
+        w  = _u(layer.width_mm)
+        h  = _u(layer.height_mm)
 
         if layer.type == "background":
             self._add_background(svg, layer, x, y, w, h, color)
@@ -217,7 +263,7 @@ class SVGBuilder:
 
         # Alinhamento vertical: desloca a linha de base da primeira linha
         # conforme "topo" (padrão, mesmo comportamento de sempre) / "centro" / "base".
-        pt_to_mm = 25.4 / 72
+        pt_to_mm = PT_TO_MM
         lh_mm = s.line_height_resolved * pt_to_mm
         total_h_mm = len(lines) * lh_mm
         if s.vertical_align == "middle":
@@ -241,33 +287,43 @@ class SVGBuilder:
         anchor = {"left": "start", "center": "middle", "right": "end"}.get(s.align, "start")
         attrs = {
             "id":          layer.id,
-            "x":           _mm(x_mm),
-            "y":           _mm(start_y_mm),
+            "x":           _u(x_mm),
+            "y":           _u(start_y_mm),
             "font-family": s.font_family,
-            "font-size":   f"{s.font_size_pt}pt",
+            "font-size":   _u(s.font_size_pt * PT_TO_MM),
             "font-weight": s.font_weight,
             "font-style":  s.font_style,
             "fill":        s.color,
             "text-anchor": anchor,
         }
         if s.letter_spacing_pt:
-            attrs["letter-spacing"] = f"{s.letter_spacing_pt}pt"
+            attrs["letter-spacing"] = _u(s.letter_spacing_pt * PT_TO_MM)
 
         text_el = ET.SubElement(svg, "text", attrs)
 
         dy = "0"
         for line in lines:
-            tspan = ET.SubElement(text_el, "tspan", {"x": _mm(x_mm), "dy": dy})
+            tspan = ET.SubElement(text_el, "tspan", {"x": _u(x_mm), "dy": dy})
             tspan.text = _escape(line)
-            dy = _mm(lh_mm)
+            dy = _u(lh_mm)
 
     def _add_rich_text(self, svg, layer, lines, x_mm, start_y_mm, w_mm, lh_mm) -> None:
         """Variante usada quando a(s) linha(s) contêm notação `{X}` de
         símbolo. SVG <tspan> não suporta intercalar imagens no meio do
-        fluxo de texto, então aqui cada linha vira uma sequência de
-        elementos <text> (uma por palavra) e <image> (um por símbolo),
-        posicionados explicitamente lado a lado — o PIL entra só como
-        régua pra medir a largura real da fonte (ver _measure_mm)."""
+        fluxo de texto, então a linha é quebrada em "trechos": sequências
+        de palavras (desenhadas como um único <text> corrido — o próprio
+        visualizador SVG cuida do espaçamento interno, então o resultado
+        não depende de nossa medição bater exatamente com a fonte que
+        efetivamente for usada pra render) intercaladas com símbolos
+        (<image>, tamanho fixo em mm, não depende de fonte nenhuma).
+
+        Nota: só a posição INICIAL de cada trecho de texto é calculada por
+        estimativa (via PIL, usada como régua — ver _measure_mm). Se a
+        fonte real do visualizador tiver métricas um pouco diferentes da
+        usada pra medir, o pior caso é um trecho começar um pouco cedo ou
+        tarde — não sobreposição de palavra em palavra, porque dentro de
+        um mesmo trecho quem posiciona letra a letra é o próprio
+        visualizador, com a fonte que ele de fato carregou."""
         s = layer.style
         font = _load_font(s.font_family, max(6, int(s.font_size_pt * DEFAULT_DPI / 72)),
                            s.font_weight, s.font_style)
@@ -277,10 +333,10 @@ class SVGBuilder:
         dy_mm = 0.0
         for li, line in enumerate(lines):
             line_y_mm = start_y_mm + dy_mm
-            units = mana_symbols.tokenize(line)
+            runs = _merge_word_runs(mana_symbols.tokenize(line))
             widths_mm = [icon_size_mm if k == "symbol" else _measure_mm(v, font)
-                         for k, v in units]
-            total_line_mm = sum(widths_mm) + space_mm * max(0, len(units) - 1)
+                         for k, v in runs]
+            total_line_mm = sum(widths_mm) + space_mm * max(0, len(runs) - 1)
 
             if s.align == "center":
                 cursor = x_mm + (w_mm - total_line_mm) / 2
@@ -289,7 +345,7 @@ class SVGBuilder:
             else:
                 cursor = x_mm
 
-            for wi, ((kind, val), width_mm) in enumerate(zip(units, widths_mm)):
+            for ri, ((kind, val), width_mm) in enumerate(zip(runs, widths_mm)):
                 if kind == "symbol":
                     png = mana_symbols.resolve_icon_png(val)
                     if png:
@@ -298,18 +354,18 @@ class SVGBuilder:
                         # heurística simples, não uma medida tipográfica exata.
                         icon_y_mm = line_y_mm - icon_size_mm * 0.78
                         ET.SubElement(svg, "image", {
-                            "id": f"{layer.id}_sym{li}_{wi}",
-                            "x": _mm(cursor), "y": _mm(icon_y_mm),
-                            "width": _mm(icon_size_mm), "height": _mm(icon_size_mm),
+                            "id": f"{layer.id}_sym{li}_{ri}",
+                            "x": _u(cursor), "y": _u(icon_y_mm),
+                            "width": _u(icon_size_mm), "height": _u(icon_size_mm),
                             "href": f"data:image/png;base64,{b64}",
                         })
                 else:
                     t = ET.SubElement(svg, "text", {
-                        "id":          f"{layer.id}_w{li}_{wi}",
-                        "x":           _mm(cursor),
-                        "y":           _mm(line_y_mm),
+                        "id":          f"{layer.id}_w{li}_{ri}",
+                        "x":           _u(cursor),
+                        "y":           _u(line_y_mm),
                         "font-family": s.font_family,
-                        "font-size":   f"{s.font_size_pt}pt",
+                        "font-size":   _u(s.font_size_pt * PT_TO_MM),
                         "font-weight": s.font_weight,
                         "font-style":  s.font_style,
                         "fill":        s.color,

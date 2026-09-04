@@ -178,9 +178,9 @@ Nova página em `docs/` (ex: `docs/simbolos-mana.md`), renderizada pelo sistema 
 - `core/render/svg_builder.py` — `_add_text` agora detecta se a linha contém símbolo reconhecido; se não, usa exatamente o caminho antigo (`<text>` + `<tspan>` por linha, zero mudança de comportamento); se sim, usa um novo caminho (`_add_rich_text`) que emite `<text>` por palavra e `<image>` por símbolo, posicionados explicitamente — porque `<tspan>` não suporta intercalar imagem no meio do fluxo. A medição de largura de palavra usa `PIL` apenas como régua (mesmo mecanismo de fonte do preview), sem gerar nenhum raster no output final.
 - `docs/09-simbolos-mana.md` — página de wiki com a tabela de notação.
 
-### 11.3 Achado à parte, fora do escopo desta feature
+### 11.3 Achado à parte, resolvido nesta mesma rodada
 
-Durante o teste de validação (renderizar um card de exemplo com `SVGBuilder`), foi observado que o texto de `card_name` — que não usa nenhuma notação de símbolo e passa pelo caminho de renderização original, inalterado — aparece desproporcionalmente grande no SVG exportado. A causa aparente é um descompasso de unidades entre `font-size` (especificado em `pt`) e o sistema de coordenadas do `viewBox` (em `mm`, sem conversão explícita). Confirmado que **não é uma regressão desta implementação** (reproduz com texto puro, sem nenhum símbolo envolvido, no caminho de código que não foi tocado). Registrado aqui para virar um item de investigação separado — não foi corrigido nesta rodada para não misturar escopos.
+Durante o teste de validação (renderizar um card de exemplo com `SVGBuilder`), foi observado que o texto de `card_name` — que não usa nenhuma notação de símbolo e passa pelo caminho de renderização original — aparecia desproporcionalmente grande e mal posicionado no SVG exportado. Investigação confirmou que **não era uma regressão desta implementação** (reproduzia com texto puro, sem símbolo envolvido, no caminho de código que não tinha sido tocado ainda nesse ponto) — era, na verdade, sintoma de um bug bem mais amplo, de unidades no export SVG como um todo. Ver seção 11.5, onde foi diagnosticado e corrigido.
 
 ### 11.4 Limpeza de assets não utilizados
 
@@ -193,8 +193,28 @@ Após implementar a engine, foi feita uma auditoria em `assets/icons/` (grep por
 
 Não foi encontrado nenhum `glob`/`listdir` dinâmico sobre a pasta em nenhuma rota ou template, então a remoção não afeta nenhuma listagem automática de ícones. `assets/icons/` e `assets/icons_png/` ficaram com exatamente 77 arquivos cada, em correspondência 1:1.
 
-### 11.5 Validação realizada
+### 11.5 Bug crítico encontrado e corrigido: unidades no SVG export
+
+Ao validar visualmente o export SVG (não só checar se `<image>` foi embutido, mas realmente abrir o resultado), foi descoberto que praticamente **todo o card ficava fora da área visível**, exceto elementos muito perto da origem (como o nome, perto de x=3.5mm/y=3.5mm). Investigação empírica (testes isolados com `cairosvg`, comparando coordenada `x="10mm"` vs `x="10"` num SVG com `viewBox` numericamente igual aos mm do card) confirmou a causa:
+
+O helper `_mm()` grava cada coordenada com sufixo de unidade (`"31.5mm"`). Mas o `viewBox` do documento é declarado com números puros que só *numericamente* coincidem com os mm do card (`viewBox="0 0 63.0 88.0"` pra um card de 63×88mm) — não há nenhuma regra do SVG que diga "1 unidade de viewBox = 1mm". Uma coordenada com unidade explícita (`"10mm"`) é resolvida pela referência fixa de 96px/polegada do SVG/CSS, **independente do viewBox**: vira ~37.8 unidades de usuário (10 × 96/25.4), não 10. Elementos a mais de ~15-20mm da origem (ou seja, quase tudo abaixo do título) ficavam posicionados muito além da borda do card — invisíveis.
+
+**Correção:** novo helper `_u()` que grava o número sem sufixo de unidade, usado em toda coordenada interna (x/y/width/height de background, imagem e texto — incluindo o `font-size`/`letter-spacing`, convertidos de pt pra mm-equivalente antes de formatar). `_mm()` (com sufixo) foi mantido **só** pro `width`/`height` do elemento `<svg>` raiz, onde uma unidade física real é o comportamento correto (define o tamanho de impressão do documento).
+
+Esse bug afetava **toda** a exportação SVG — não só texto, não só símbolos — desde antes desta feature existir. Corrigido nesta rodada por estar bloqueando totalmente a validação visual do que estava sendo construído.
+
+### 11.6 Limitação encontrada durante os testes: `@font-face` embutido não renderiza nas ferramentas de teste locais
+
+Ao validar o `_add_rich_text` (caminho novo, usado quando há símbolo na linha), palavras apareciam coladas/sobrepostas. Isolando o problema: tanto `cairosvg` quanto `librsvg` (motor do Inkscape/GNOME) **ignoram a fonte embutida via `@font-face`/`data:` URI e caem pra uma fonte genérica de fallback** — testado com a Beleren-Bold e também com uma fonte de sistema comum (DejaVu Sans Bold) pelo mesmo caminho, mesmo resultado — confirma que é uma limitação geral dessas duas ferramentas com fontes embutidas em SVG, não algo específico da fonte do projeto.
+
+Como a posição de cada palavra é calculada via PIL usando a fonte real (Beleren-Bold), e a fonte que efetivamente renderiza nessas ferramentas é outra (com métricas diferentes), a posição calculada não bate com o que é desenhado — causando sobreposição.
+
+**Mitigação aplicada:** `_add_rich_text` agora agrupa palavras consecutivas num único trecho de texto corrido (`_merge_word_runs`) em vez de um elemento por palavra. Dentro de um mesmo trecho, quem posiciona letra a letra é o próprio visualizador SVG — correto não importa qual fonte ele efetivamente carregou. Isso elimina a sobreposição palavra-a-palavra. Resta um risco residual menor: a largura *total* de um trecho longo (a distância estimada até o próximo símbolo) ainda depende da medição via PIL bater aproximadamente com a fonte real — erro pequeno em trechos curtos, potencialmente perceptível em frases muito longas sem símbolo no meio.
+
+**Não corrigido nesta rodada, e por quê:** fontes embutidas via `@font-face`/`data:` URI são um recurso padrão da web, bem suportado por navegadores reais (Chrome, Firefox, Safari) — a limitação encontrada é das ferramentas de teste automatizado usadas localmente (`cairosvg`, `librsvg`), não necessariamente do ambiente onde o usuário final vai abrir o SVG exportado. Resolver isso de forma completa exigiria um harness de teste baseado em navegador de verdade (Playwright/Chromium, já usado no projeto para outra finalidade), fora do escopo desta rodada. Recomendação: abrir o `.svg` gerado num navegador de verdade pra validar a tipografia antes de considerar esse ponto fechado — se a fonte carregar corretamente lá (bem provável), o risco residual do parágrafo anterior também fica bem menor na prática.
+
+### 11.7 Validação realizada
 
 Renderização de teste com `mana_cost="{3}{U}{R}"` e `rules_text` contendo `{T}`, `{W}`, `{U}`, `{2/R}`, via `_default_template`:
 - **Preview PIL:** símbolos aparecem inline, quebra de linha respeita o símbolo como unidade atômica, texto sem símbolo continua idêntico ao comportamento anterior.
-- **Export SVG:** 7 elementos `<image>` embutidos corretamente para os símbolos usados; ressalva da seção 11.3 quanto ao tamanho do texto (não relacionado aos símbolos em si).
+- **Export SVG:** card inteiro visível e nas posições corretas após a correção da seção 11.5; símbolos embutidos corretamente; palavras não se sobrepõem mais após a mitigação da seção 11.6. Ressalva de tipografia (fonte de fallback nas ferramentas de teste locais) documentada na mesma seção — recomenda-se conferir num navegador real antes de considerar o export SVG 100% validado tipograficamente.
