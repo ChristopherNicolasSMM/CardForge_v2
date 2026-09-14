@@ -1,0 +1,76 @@
+:root {
+  /* Cor — paleta "oficina de forja" */
+  --forge-black:  #1B1815;
+  --iron:         #241F1A;
+  --iron-panel:   #2A241F;
+  --iron-line:    #453B32;
+  --iron-line-lo: #332C25;
+  --parchment:    #EFE6D3;
+  --parchment-lo: #B9AF9A;
+  --ember:        #C1521F;
+  --ember-hi:     #DE6A30;
+  --ember-lo:     #8E3B14;
+  --temper-blue:  #4E7C8C;
+  --temper-hi:    #6B9CAC;
+  --forge-gold:   #C79A3E;
+  --danger:       #B84A3E;
+  --ok:           #6E9C5C;
+
+  /* Tipografia */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-ui:      'IBM Plex Sans', -apple-system, sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, monospace;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--forge-black);
+  color: var(--parchment);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(193,82,31,0.08), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--parchment);
+  margin: 0 0 .5em;
+  letter-spacing: -0.01em;
+}
+h1 { font-size: 2rem; font-weight: 500; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+
+p { margin: 0 0 1em; color: var(--parchment-lo); max-width: 62ch; }
+
+a { color: var(--temper-hi); text-decoration: none; }
+a:hover { color: var(--ember-hi); }
+
+code, .mono, input, select, textarea, table { font-family: var(--font-ui); }
+.mono, .num, td.num, input[type="number"] { font-family: var(--font-mono); }
+
+::selection { background: var(--ember-lo); color: var(--parchment); }
+
+:focus-visible {
+  outline: 2px solid var(--temper-hi);
+  outline-offset: 2px;
+}
+
+button { font-family: inherit; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--iron); }
+::-webkit-scrollbar-thumb { background: var(--iron-line); border-radius: 5px; }

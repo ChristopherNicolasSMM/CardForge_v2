@@ -1,0 +1,9 @@
+{
+  "name": "Magic",
+  "description": "Coleção estilo Magic: The Gathering (fã / paródia) — template com custo de mana, cores, poder/resistência e edição fictícia \"Ecos de Ardenor\".",
+  "game": "Magic (estilo TCG de cores)",
+  "based_on": null,
+  "created_at": 1789151654.7450364,
+  "updated_at": 1789151654.7450366,
+  "identifier_field": "name"
+}

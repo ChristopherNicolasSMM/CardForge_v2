@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+instance/
+collections/*/output/
+*.egg-info/
+.DS_Store
+
+# Build do executável (PyInstaller) — gerado localmente ou via CI, nunca
+# versionado. Ver docs/tech/doc-tecnico-executavel.md.
+/build/
+/dist/
+
+#Geração de patch
+*.patch
+
+########################################################################
+#   COLEÇÕES A IGNORAR
+########################################################################
+#------.> Duelo das Tavernas
+#Teste profundo do CardForge em cenário real
+#Cenário da Ludus Arcanum -> Propriedade de licença então não deve subir...
+/collections/duelo_das_tavernas/
+#------.> Rótulos Valirian -> 
+#Inicialmente fazia parte do projeto, porém removido por hora.
+/collections/valirian/
+

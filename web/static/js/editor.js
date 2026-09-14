@@ -1,0 +1,925 @@
+(function () {
+  "use strict";
+
+  const T = window.CF_TEMPLATE;
+  const NAME = window.CF_TEMPLATE_NAME;
+  const URLS = window.CF_URLS;
+  const DEMO_ROW = window.CF_DEMO_ROW;
+
+  const canvas = document.getElementById("cardCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const BASE_SCALE = canvas.width / T.card.width_mm; // px/mm no zoom 100%
+  let zoomLevel = 1.0;
+  let PX_PER_MM = BASE_SCALE * zoomLevel;
+
+  function applyZoom() {
+    PX_PER_MM = BASE_SCALE * zoomLevel;
+    canvas.width = Math.round(T.card.width_mm * PX_PER_MM);
+    canvas.height = Math.round(T.card.height_mm * PX_PER_MM);
+    const label = document.getElementById("zoomLabel");
+    if (label) label.textContent = Math.round(zoomLevel * 100) + "%";
+    render();
+  }
+  canvas.height = Math.round(T.card.height_mm * PX_PER_MM);
+
+  let selectedId = null;      // camada "âncora" (última clicada) — usada pra redimensionar e como referência
+  let selectedIds = new Set(); // conjunto completo da seleção (multi-seleção)
+  let dragMode = null;      // 'move' | 'resize' | null
+  let dragStart = null;     // {mx, my, positions:{id:{x_mm,y_mm}}, w_mm, h_mm}
+
+  const imageCache = {};    // url -> HTMLImageElement
+  const loadedFonts = new Set();
+
+  // ── Auto-save ────────────────────────────────────────────────────────────
+
+  const AUTO_SAVE_DELAY_MS = 1000;
+  let isDirty = false;
+  let autoSaveTimer = null;
+  const saveStatusEl = document.getElementById("saveStatus");
+
+  function setSaveStatus(state) {
+    if (!saveStatusEl) return;
+    saveStatusEl.classList.remove("dirty", "saving", "saved");
+    if (state === "dirty") {
+      saveStatusEl.textContent = "Alterações não salvas…";
+      saveStatusEl.classList.add("dirty");
+    } else if (state === "saving") {
+      saveStatusEl.textContent = "Salvando…";
+      saveStatusEl.classList.add("saving");
+    } else if (state === "saved") {
+      const t = new Date();
+      const hh = String(t.getHours()).padStart(2, "0"), mm = String(t.getMinutes()).padStart(2, "0");
+      saveStatusEl.textContent = `Salvo às ${hh}:${mm}`;
+      saveStatusEl.classList.add("saved");
+    } else {
+      saveStatusEl.textContent = "";
+    }
+  }
+
+  function scheduleAutoSave() {
+    isDirty = true;
+    setSaveStatus("dirty");
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => { saveTemplate(true); }, AUTO_SAVE_DELAY_MS);
+  }
+
+  window.addEventListener("beforeunload", evt => {
+    if (!isDirty) return;
+    evt.preventDefault();
+    evt.returnValue = ""; // navegadores modernos ignoram texto customizado aqui
+  });
+
+  // ── Utilidades ────────────────────────────────────────────────────────────
+
+  function mm(px) { return px / PX_PER_MM; }
+  function px(mmVal) { return mmVal * PX_PER_MM; }
+
+  function sortedLayers() {
+    return [...T.layers].sort((a, b) => a.z_index - b.z_index);
+  }
+
+  function layerById(id) { return T.layers.find(l => l.id === id); }
+
+  function getSelectedLayers() {
+    return T.layers.filter(l => selectedIds.has(l.id));
+  }
+
+  function getImage(url) {
+    if (imageCache[url]) return imageCache[url];
+    const img = new Image();
+    img.src = url;
+    img.onload = render;
+    imageCache[url] = img;
+    return img;
+  }
+
+  function ensureFont(family) {
+    if (!family || loadedFonts.has(family)) return;
+    loadedFonts.add(family);
+    const url = `${URLS.font}${encodeURIComponent(family)}.ttf`;
+    const face = new FontFace(family, `url(${url})`);
+    face.load().then(loaded => {
+      document.fonts.add(loaded);
+      render();
+    }).catch(() => { /* fonte indisponível — usa fallback do navegador */ });
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#d8d8d8";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    for (const layer of sortedLayers()) {
+      if (!layer.visible) continue;
+      drawLayer(layer);
+    }
+
+    for (const id of selectedIds) {
+      const l = layerById(id);
+      if (l) drawSelection(l, selectedIds.size === 1);
+    }
+  }
+
+  function drawLayer(layer) {
+    const x = px(layer.x_mm), y = px(layer.y_mm);
+    const w = px(layer.width_mm), h = px(layer.height_mm);
+
+    if (layer.type === "background") {
+      if (layer.source_image) {
+        const img = getImage(URLS.asset + encodeURIComponent(layer.source_image));
+        if (img.complete && img.naturalWidth) {
+          drawCover(img, x, y, w, h);
+          return;
+        }
+      }
+      const grad = ctx.createLinearGradient(0, y, 0, y + h);
+      grad.addColorStop(0, "#8a8a8a");
+      grad.addColorStop(1, "#5a5a5a");
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+      return;
+    }
+
+    if (layer.type === "image") {
+      ctx.fillStyle = "rgba(78,124,140,0.12)";
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = "rgba(78,124,140,0.55)";
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#6b9cac";
+      ctx.font = "11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`🖼 ${layer.field || layer.label || "arte"}`, x + w / 2, y + h / 2);
+      return;
+    }
+
+    if (layer.type === "text" || layer.type === "mana") {
+      const s = layer.style || {};
+      ensureFont(s.font_family);
+      const text = layer.static_text || DEMO_ROW[layer.field] || `{${layer.field || layer.label}}`;
+      const sizePx = (s.font_size_pt || 9) * (96 / 72) * (PX_PER_MM / (96 / 25.4));
+      const weight = s.font_weight === "bold" ? "bold" : "normal";
+      const style = s.font_style === "italic" ? "italic" : "normal";
+      ctx.font = `${style} ${weight} ${sizePx}px "${s.font_family || "sans-serif"}", sans-serif`;
+      ctx.fillStyle = s.color || "#111111";
+      ctx.textBaseline = "top";
+      const align = s.align || "left";
+      ctx.textAlign = align === "center" ? "center" : (align === "right" ? "right" : "left");
+      const tx = align === "center" ? x + w / 2 : (align === "right" ? x + w : x);
+
+      // Espaçamento entre letras (Canvas2D letterSpacing — suportado nos navegadores modernos)
+      const spacingPx = (s.letter_spacing_pt || 0) * (96 / 72) * (PX_PER_MM / (96 / 25.4));
+      if ("letterSpacing" in ctx) ctx.letterSpacing = spacingPx ? `${spacingPx}px` : "0px";
+
+      const lh = (s.line_height_pt || (s.font_size_pt || 9) * 1.35) * (96 / 72) * (PX_PER_MM / (96 / 25.4));
+      const lines = layer.multiline ? wrapText(String(text), w) : [String(text)];
+
+      // Alinhamento vertical: posiciona o bloco de texto dentro da caixa
+      const totalH = lines.length * lh;
+      let startY = y;
+      if (s.vertical_align === "middle") startY = y + Math.max(0, (h - totalH) / 2);
+      else if (s.vertical_align === "bottom") startY = y + Math.max(0, h - totalH);
+
+      lines.forEach((line, i) => ctx.fillText(line, tx, startY + i * lh));
+      if ("letterSpacing" in ctx) ctx.letterSpacing = "0px"; // não vaza pra próxima camada desenhada
+      return;
+    }
+  }
+
+  function wrapText(text, maxWidth) {
+    const words = text.split(" ");
+    const lines = [];
+    let cur = "";
+    for (const word of words) {
+      const test = (cur + " " + word).trim();
+      if (ctx.measureText(test).width <= maxWidth || !cur) {
+        cur = test;
+      } else {
+        lines.push(cur);
+        cur = word;
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  function drawCover(img, x, y, w, h) {
+    const ir = img.naturalWidth / img.naturalHeight;
+    const dr = w / h;
+    let sx, sy, sw, sh;
+    if (ir > dr) {
+      sh = img.naturalHeight; sw = sh * dr; sy = 0; sx = (img.naturalWidth - sw) / 2;
+    } else {
+      sw = img.naturalWidth; sh = sw / dr; sx = 0; sy = (img.naturalHeight - sh) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  function drawSelection(layer, showHandle) {
+    if (!layer) return;
+    const x = px(layer.x_mm), y = px(layer.y_mm), w = px(layer.width_mm), h = px(layer.height_mm);
+    ctx.strokeStyle = layer.locked ? "#8a8a8a" : "#DE6A30";
+    ctx.lineWidth = 2;
+    ctx.setLineDash(layer.locked ? [5, 4] : []);
+    ctx.strokeRect(x, y, w, h);
+    ctx.setLineDash([]);
+    if (!layer.locked && showHandle) {
+      ctx.fillStyle = "#DE6A30";
+      ctx.fillRect(x + w - 8, y + h - 8, 8, 8);
+    } else if (layer.locked) {
+      ctx.font = "12px sans-serif";
+      ctx.fillStyle = "#c9c9c9";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText("🔒", x + 3, y + 3);
+    }
+  }
+
+  // ── Interação: arrastar / redimensionar ─────────────────────────────────
+  //
+  // Regras de clique:
+  //   1. Clique dentro de alguma camada JÁ SELECIONADA sempre arrasta o grupo
+  //      inteiro selecionado, não importa se há outra camada por cima nesse ponto.
+  //   2. Alt+clique fura a pilha: cicla, a cada clique no mesmo ponto, pela
+  //      lista de camadas sobrepostas ali (da mais de cima pra mais de baixo) —
+  //      sempre seleciona só uma (cancela multi-seleção).
+  //   3. Ctrl/Cmd+clique alterna a camada clicada na seleção (multi-seleção).
+  //   4. Clique comum fora da seleção: pega a camada do topo, seleciona só ela.
+  //   5. Camadas travadas (🔒) nunca são pegas por clique no canvas — só pela
+  //      lista de camadas à esquerda.
+
+  function mousePos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    return { mx: evt.clientX - rect.left, my: evt.clientY - rect.top };
+  }
+
+  function layersAtPoint(mx, my) {
+    return sortedLayers().reverse().filter(l => {
+      if (l.locked) return false;
+      const x = px(l.x_mm), y = px(l.y_mm), w = px(l.width_mm), h = px(l.height_mm);
+      return mx >= x && mx <= x + w && my >= y && my <= y + h;
+    });
+  }
+
+  function hitTest(mx, my) {
+    const layers = layersAtPoint(mx, my);
+    return layers.length ? layers[0] : null;
+  }
+
+  function nearHandle(layer, mx, my) {
+    if (!layer || layer.locked) return false;
+    const x = px(layer.x_mm) + px(layer.width_mm);
+    const y = px(layer.y_mm) + px(layer.height_mm);
+    return Math.abs(mx - x) <= 10 && Math.abs(my - y) <= 10;
+  }
+
+  function buildGroupDragStart(mx, my) {
+    const layers = getSelectedLayers().filter(l => !l.locked);
+    const positions = {};
+    layers.forEach(l => { positions[l.id] = { x_mm: l.x_mm, y_mm: l.y_mm }; });
+    const anchor = layerById(selectedId);
+    return {
+      mx, my, positions,
+      w_mm: anchor ? anchor.width_mm : 0,
+      h_mm: anchor ? anchor.height_mm : 0,
+    };
+  }
+
+  let altCycle = null; // { mx, my, index }
+
+  canvas.addEventListener("mousedown", evt => {
+    const { mx, my } = mousePos(evt);
+    const additive = evt.ctrlKey || evt.metaKey;
+    const selected = selectedId ? layerById(selectedId) : null;
+
+    // Alça de redimensionar tem prioridade máxima (só com 1 camada selecionada, destravada)
+    if (selectedIds.size === 1 && selected && nearHandle(selected, mx, my)) {
+      dragMode = "resize";
+      dragStart = { mx, my, w_mm: selected.width_mm, h_mm: selected.height_mm };
+      return;
+    }
+
+    // Alt+clique: fura a pilha, ciclando pelas camadas sobrepostas nesse ponto
+    if (evt.altKey) {
+      const candidates = layersAtPoint(mx, my);
+      if (candidates.length === 0) { altCycle = null; selectLayer(null); return; }
+      const samePoint = altCycle && Math.abs(altCycle.mx - mx) < 4 && Math.abs(altCycle.my - my) < 4;
+      const idx = samePoint ? (altCycle.index + 1) % candidates.length : 0;
+      altCycle = { mx, my, index: idx };
+      const target = candidates[idx];
+      selectLayer(target.id);
+      dragMode = "move";
+      dragStart = buildGroupDragStart(mx, my);
+      return;
+    }
+    altCycle = null;
+
+    // Ctrl/Cmd+clique: alterna a camada clicada dentro da seleção
+    if (additive) {
+      const hit = hitTest(mx, my);
+      if (hit) {
+        selectLayer(hit.id, { additive: true });
+        if (selectedIds.has(hit.id)) {
+          dragMode = "move";
+          dragStart = buildGroupDragStart(mx, my);
+        }
+      }
+      return;
+    }
+
+    // Clique dentro de alguma camada já selecionada: arrasta o grupo inteiro,
+    // mesmo se outra camada estiver visualmente por cima nesse ponto.
+    if (selectedIds.size > 0) {
+      const insideSelected = getSelectedLayers().some(l => {
+        if (l.locked) return false;
+        const x = px(l.x_mm), y = px(l.y_mm), w = px(l.width_mm), h = px(l.height_mm);
+        return mx >= x && mx <= x + w && my >= y && my <= y + h;
+      });
+      if (insideSelected) {
+        dragMode = "move";
+        dragStart = buildGroupDragStart(mx, my);
+        return;
+      }
+    }
+
+    // Clique comum: pega a camada do topo nesse ponto (ignora travadas), seleciona só ela
+    const hit = hitTest(mx, my);
+    selectLayer(hit ? hit.id : null);
+    if (hit) {
+      dragMode = "move";
+      dragStart = buildGroupDragStart(mx, my);
+    }
+  });
+
+  canvas.addEventListener("mousemove", evt => {
+    if (!dragMode) return;
+    const { mx, my } = mousePos(evt);
+    const dxmm = mm(mx - dragStart.mx), dymm = mm(my - dragStart.my);
+
+    if (dragMode === "move") {
+      for (const [id, pos] of Object.entries(dragStart.positions)) {
+        const layer = layerById(id);
+        if (!layer || layer.locked) continue;
+        layer.x_mm = Math.max(0, +(pos.x_mm + dxmm).toFixed(2));
+        layer.y_mm = Math.max(0, +(pos.y_mm + dymm).toFixed(2));
+      }
+    } else if (dragMode === "resize") {
+      const layer = layerById(selectedId);
+      if (!layer || layer.locked) return;
+      layer.width_mm = Math.max(2, +(dragStart.w_mm + dxmm).toFixed(2));
+      layer.height_mm = Math.max(2, +(dragStart.h_mm + dymm).toFixed(2));
+    }
+    const sel = getSelectedLayers();
+    if (sel.length === 1) syncPropsFromLayer(sel[0]);
+    else if (sel.length > 1) syncPropsFromLayers(sel);
+    render();
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (dragMode) scheduleAutoSave();
+    dragMode = null;
+  });
+
+  // ── Mover camada(s) selecionada(s) com as setas do teclado (precisão) ────
+
+  window.addEventListener("keydown", evt => {
+    const tag = (evt.target.tagName || "").toLowerCase();
+    if (["input", "select", "textarea"].includes(tag)) return; // não atrapalha digitação
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(evt.key)) return;
+
+    const layers = getSelectedLayers().filter(l => !l.locked);
+    if (!layers.length) return;
+
+    evt.preventDefault();
+    const step = evt.shiftKey ? 2 : 0.5; // mm — Shift pra passo maior
+    let dx = 0, dy = 0;
+    if (evt.key === "ArrowLeft")  dx = -step;
+    if (evt.key === "ArrowRight") dx = step;
+    if (evt.key === "ArrowUp")    dy = -step;
+    if (evt.key === "ArrowDown")  dy = step;
+    layers.forEach(l => {
+      l.x_mm = Math.max(0, +(l.x_mm + dx).toFixed(2));
+      l.y_mm = Math.max(0, +(l.y_mm + dy).toFixed(2));
+    });
+    if (layers.length === 1) syncPropsFromLayer(layers[0]);
+    else syncPropsFromLayers(getSelectedLayers());
+    render();
+    scheduleAutoSave();
+  });
+
+  // ── Lista de camadas ─────────────────────────────────────────────────────
+
+  function renderLayerList() {
+    const list = document.getElementById("layerList");
+    list.innerHTML = "";
+    for (const layer of sortedLayers().reverse()) {
+      const item = document.createElement("div");
+      item.className = "layer-item" + (selectedIds.has(layer.id) ? " selected" : "") + (layer.locked ? " locked" : "");
+      item.innerHTML = `
+        <span class="lock-toggle" title="${layer.locked ? 'Destravar (permitir clique/arraste no canvas)' : 'Travar (clique no canvas atravessa essa camada)'}">${layer.locked ? "🔒" : "🔓"}</span>
+        <span class="layer-name">${layer.label || layer.id}</span>
+        <span class="type-tag" title="z-index ${layer.z_index}">${layer.type} · ${layer.z_index}</span>
+      `;
+      item.querySelector(".lock-toggle").addEventListener("click", e => {
+        e.stopPropagation();
+        layer.locked = !layer.locked;
+        renderLayerList();
+        render();
+        scheduleAutoSave();
+      });
+      item.addEventListener("click", e => selectLayer(layer.id, { additive: e.ctrlKey || e.metaKey }));
+      list.appendChild(item);
+    }
+  }
+
+  function selectLayer(id, opts) {
+    opts = opts || {};
+    if (id === null) {
+      selectedIds.clear();
+      selectedId = null;
+    } else if (opts.additive) {
+      if (selectedIds.has(id)) {
+        selectedIds.delete(id);
+        selectedId = selectedIds.size ? [...selectedIds][selectedIds.size - 1] : null;
+      } else {
+        selectedIds.add(id);
+        selectedId = id;
+      }
+    } else {
+      selectedIds = new Set([id]);
+      selectedId = id;
+    }
+
+    renderLayerList();
+    const layers = getSelectedLayers();
+    const multi = layers.length > 1;
+    document.getElementById("propsForm").style.display = layers.length ? "block" : "none";
+    document.getElementById("propsEmpty").style.display = layers.length ? "none" : "block";
+    const multiBanner = document.getElementById("propsMulti");
+    if (multiBanner) {
+      multiBanner.style.display = multi ? "block" : "none";
+      if (multi) multiBanner.textContent = `${layers.length} camadas selecionadas — as alterações abaixo aplicam a todas.`;
+    }
+    if (layers.length === 1) syncPropsFromLayer(layers[0]);
+    else if (multi) syncPropsFromLayers(layers);
+    render();
+  }
+
+  // ── Painel de propriedades ───────────────────────────────────────────────
+
+  const P = id => document.getElementById(id);
+
+  function syncPropsFromLayer(layer) {
+    P("p_label").value = layer.label || "";
+    P("p_field").value = layer.field || "";
+    P("p_static").value = layer.static_text || "";
+    P("p_x").value = layer.x_mm;
+    P("p_y").value = layer.y_mm;
+    P("p_w").value = layer.width_mm;
+    P("p_h").value = layer.height_mm;
+    P("p_z").value = layer.z_index;
+    P("p_fit").value = layer.fit || "cover";
+    P("p_visible").indeterminate = false; P("p_visible").checked = !!layer.visible;
+    P("p_multiline").indeterminate = false; P("p_multiline").checked = !!layer.multiline;
+    P("p_locked").indeterminate = false; P("p_locked").checked = !!layer.locked;
+    const s = layer.style || {};
+    P("p_font").value = s.font_family || "";
+    P("p_size").value = s.font_size_pt || 9;
+    P("p_lh").value = s.line_height_pt || 0;
+    P("p_weight").value = s.font_weight || "normal";
+    P("p_style").value = s.font_style || "normal";
+    P("p_align").value = s.align || "left";
+    P("p_color").value = toHex(s.color || "#111111");
+    P("p_valign").value = s.vertical_align || "top";
+    P("p_letterspacing").value = s.letter_spacing_pt || 0;
+
+    // Imagem fixa: só faz sentido pra camadas de imagem/fundo
+    const isImageLike = layer.type === "image" || layer.type === "background";
+    P("p_fixedImageWrap").style.display = isImageLike ? "block" : "none";
+    P("p_fixedImageName").textContent = layer.source_image
+      ? `imagem atual: ${layer.source_image}`
+      : "nenhuma imagem definida";
+  }
+
+  // Preenche o painel de propriedades quando várias camadas estão selecionadas:
+  // campos com o mesmo valor em todas mostram esse valor; campos divergentes
+  // ficam em branco/indeterminado (padrão "misto" do Figma/Illustrator) — editar
+  // qualquer campo aplica o novo valor a todas as camadas selecionadas de uma vez.
+  function commonValue(layers, getter) {
+    const vals = layers.map(getter);
+    return vals.every(v => v === vals[0]) ? vals[0] : null;
+  }
+
+  function setMixedText(el, value) {
+    el.value = value === null ? "" : value;
+    el.placeholder = value === null ? "(valores diferentes)" : "";
+  }
+
+  function setMixedCheck(el, value) {
+    if (value === null) { el.indeterminate = true; }
+    else { el.indeterminate = false; el.checked = !!value; }
+  }
+
+  function syncPropsFromLayers(layers) {
+    setMixedText(P("p_label"), commonValue(layers, l => l.label || ""));
+    setMixedText(P("p_field"), commonValue(layers, l => l.field || ""));
+    setMixedText(P("p_static"), commonValue(layers, l => l.static_text || ""));
+    setMixedText(P("p_x"), commonValue(layers, l => l.x_mm));
+    setMixedText(P("p_y"), commonValue(layers, l => l.y_mm));
+    setMixedText(P("p_w"), commonValue(layers, l => l.width_mm));
+    setMixedText(P("p_h"), commonValue(layers, l => l.height_mm));
+    setMixedText(P("p_z"), commonValue(layers, l => l.z_index));
+    const fitCommon = commonValue(layers, l => l.fit || "cover");
+    P("p_fit").value = fitCommon || "cover";
+    setMixedCheck(P("p_visible"), commonValue(layers, l => !!l.visible));
+    setMixedCheck(P("p_multiline"), commonValue(layers, l => !!l.multiline));
+    setMixedCheck(P("p_locked"), commonValue(layers, l => !!l.locked));
+
+    const fontCommon = commonValue(layers, l => (l.style || {}).font_family || "");
+    P("p_font").value = fontCommon || (layers[0].style || {}).font_family || "";
+    setMixedText(P("p_size"), commonValue(layers, l => (l.style || {}).font_size_pt ?? 9));
+    setMixedText(P("p_lh"), commonValue(layers, l => (l.style || {}).line_height_pt ?? 0));
+    const weightCommon = commonValue(layers, l => (l.style || {}).font_weight || "normal");
+    P("p_weight").value = weightCommon || "normal";
+    const styleCommon = commonValue(layers, l => (l.style || {}).font_style || "normal");
+    P("p_style").value = styleCommon || "normal";
+    const alignCommon = commonValue(layers, l => (l.style || {}).align || "left");
+    P("p_align").value = alignCommon || "left";
+    const valignCommon = commonValue(layers, l => (l.style || {}).vertical_align || "top");
+    P("p_valign").value = valignCommon || "top";
+    setMixedText(P("p_letterspacing"), commonValue(layers, l => (l.style || {}).letter_spacing_pt ?? 0));
+    const colorCommon = commonValue(layers, l => toHex((l.style || {}).color || "#111111"));
+    P("p_color").value = colorCommon || toHex((layers[0].style || {}).color || "#111111");
+
+    const anyImageLike = layers.some(l => l.type === "image" || l.type === "background");
+    P("p_fixedImageWrap").style.display = anyImageLike ? "block" : "none";
+    P("p_fixedImageName").textContent = `${layers.length} camadas selecionadas`;
+  }
+
+  function toHex(c) {
+    if (/^#[0-9a-f]{6}$/i.test(c)) return c;
+    return "#111111";
+  }
+
+  function bindProp(id, apply) {
+    P(id).addEventListener("input", () => {
+      const layers = getSelectedLayers();
+      if (!layers.length) return;
+      layers.forEach(l => apply(l, P(id)));
+      renderLayerList();
+      render();
+      scheduleAutoSave();
+    });
+  }
+
+  function populateFontSelect() {
+    const sel = P("p_font");
+    sel.innerHTML = "";
+    for (const f of window.CF_FONTS) {
+      const opt = document.createElement("option");
+      opt.value = f; opt.textContent = f;
+      sel.appendChild(opt);
+    }
+  }
+
+  populateFontSelect();
+
+  bindProp("p_label", (l, el) => l.label = el.value);
+  bindProp("p_field", (l, el) => l.field = el.value);
+  bindProp("p_static", (l, el) => l.static_text = el.value);
+
+  // Paleta de símbolos pro campo "Texto fixo" — insere na posição do
+  // cursor do <input> e dispara "input" pra reaproveitar o bindProp acima
+  // (sem duplicar a lógica de sync com o modelo da camada).
+  const btnInsertSymbolStatic = document.getElementById("btnInsertSymbolStatic");
+  if (btnInsertSymbolStatic) {
+    btnInsertSymbolStatic.addEventListener("click", () => {
+      const input = P("p_static");
+      window.CF_openSymbolPicker(btnInsertSymbolStatic, notation => {
+        const token = `{${notation}}`;
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? input.value.length;
+        input.value = input.value.slice(0, start) + token + input.value.slice(end);
+        const caret = start + token.length;
+        input.focus();
+        input.setSelectionRange(caret, caret);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    });
+  }
+
+  bindProp("p_x", (l, el) => l.x_mm = parseFloat(el.value) || 0);
+  bindProp("p_y", (l, el) => l.y_mm = parseFloat(el.value) || 0);
+  bindProp("p_w", (l, el) => l.width_mm = parseFloat(el.value) || 1);
+  bindProp("p_h", (l, el) => l.height_mm = parseFloat(el.value) || 1);
+  bindProp("p_z", (l, el) => l.z_index = parseInt(el.value) || 0);
+  bindProp("p_fit", (l, el) => l.fit = el.value);
+  bindProp("p_visible", (l, el) => l.visible = el.checked);
+  bindProp("p_multiline", (l, el) => l.multiline = el.checked);
+  bindProp("p_locked", (l, el) => { l.locked = el.checked; });
+  bindProp("p_font", (l, el) => { l.style = l.style || {}; l.style.font_family = el.value; loadedFonts.delete(el.value); ensureFont(el.value); });
+  bindProp("p_size", (l, el) => { l.style = l.style || {}; l.style.font_size_pt = parseFloat(el.value) || 9; });
+  bindProp("p_lh", (l, el) => { l.style = l.style || {}; l.style.line_height_pt = parseFloat(el.value) || 0; });
+  bindProp("p_weight", (l, el) => { l.style = l.style || {}; l.style.font_weight = el.value; });
+  bindProp("p_style", (l, el) => { l.style = l.style || {}; l.style.font_style = el.value; });
+  bindProp("p_align", (l, el) => { l.style = l.style || {}; l.style.align = el.value; });
+  bindProp("p_color", (l, el) => { l.style = l.style || {}; l.style.color = el.value; });
+  bindProp("p_valign", (l, el) => { l.style = l.style || {}; l.style.vertical_align = el.value; });
+  bindProp("p_letterspacing", (l, el) => { l.style = l.style || {}; l.style.letter_spacing_pt = parseFloat(el.value) || 0; });
+
+  // ── Alinhamento ───────────────────────────────────────────────────────────
+
+  function alignLayer(mode) {
+    const layers = getSelectedLayers().filter(l => !l.locked);
+    if (!layers.length) return;
+    const cw = T.card.width_mm, ch = T.card.height_mm;
+    layers.forEach(layer => {
+      if (mode === "left")       layer.x_mm = 0;
+      if (mode === "center-h")   layer.x_mm = +(cw / 2 - layer.width_mm / 2).toFixed(2);
+      if (mode === "right")      layer.x_mm = +(cw - layer.width_mm).toFixed(2);
+      if (mode === "top")        layer.y_mm = 0;
+      if (mode === "middle-v")   layer.y_mm = +(ch / 2 - layer.height_mm / 2).toFixed(2);
+      if (mode === "bottom")     layer.y_mm = +(ch - layer.height_mm).toFixed(2);
+    });
+    if (layers.length === 1) syncPropsFromLayer(layers[0]);
+    else syncPropsFromLayers(getSelectedLayers());
+    render();
+    scheduleAutoSave();
+  }
+  P("alignLeft").addEventListener("click", () => alignLayer("left"));
+  P("alignCenterH").addEventListener("click", () => alignLayer("center-h"));
+  P("alignRight").addEventListener("click", () => alignLayer("right"));
+  P("alignTop").addEventListener("click", () => alignLayer("top"));
+  P("alignMiddleV").addEventListener("click", () => alignLayer("middle-v"));
+  P("alignBottom").addEventListener("click", () => alignLayer("bottom"));
+
+  // ── Ordem de empilhamento (z-index) ─────────────────────────────────────
+  //
+  // "Frente"/"trás" funcionam com o grupo inteiro selecionado, preservando a
+  // ordem relativa entre elas. "Subir"/"descer" (trocar com a vizinha) só
+  // fazem sentido pra uma camada por vez, então usam sempre a âncora.
+
+  function orderLayer(mode) {
+    const layers = getSelectedLayers();
+    if (!layers.length) return;
+    const zs = T.layers.map(l => l.z_index);
+
+    if (mode === "front") {
+      const maxZ = Math.max(...zs);
+      const ordered = [...layers].sort((a, b) => a.z_index - b.z_index);
+      ordered.forEach((l, i) => { l.z_index = maxZ + 1 + i; });
+    } else if (mode === "back") {
+      const minZ = Math.min(...zs);
+      const ordered = [...layers].sort((a, b) => a.z_index - b.z_index);
+      ordered.forEach((l, i) => { l.z_index = minZ - ordered.length + i; });
+    } else {
+      const layer = layerById(selectedId);
+      if (!layer) return;
+      const seq = sortedLayers();
+      const idx = seq.findIndex(l => l.id === layer.id);
+      if (mode === "up" && idx < seq.length - 1) {
+        const next = seq[idx + 1];
+        const tmp = layer.z_index; layer.z_index = next.z_index; next.z_index = tmp;
+      }
+      if (mode === "down" && idx > 0) {
+        const prev = seq[idx - 1];
+        const tmp = layer.z_index; layer.z_index = prev.z_index; prev.z_index = tmp;
+      }
+    }
+    const sel = getSelectedLayers();
+    if (sel.length === 1) syncPropsFromLayer(sel[0]);
+    else syncPropsFromLayers(sel);
+    renderLayerList();
+    render();
+    scheduleAutoSave();
+  }
+  P("orderFront").addEventListener("click", () => orderLayer("front"));
+  P("orderBack").addEventListener("click", () => orderLayer("back"));
+  P("orderUp").addEventListener("click", () => orderLayer("up"));
+  P("orderDown").addEventListener("click", () => orderLayer("down"));
+
+  // ── Imagem fixa (camadas de imagem/fundo sem campo do dataset) ──────────
+
+  P("p_fixedImageUpload").addEventListener("change", async evt => {
+    const file = evt.target.files[0];
+    const layers = getSelectedLayers().filter(l => l.type === "image" || l.type === "background");
+    if (!file || !layers.length) return;
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(URLS.layerImage, { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      layers.forEach(l => { l.source_image = data.filename; });
+      delete imageCache[URLS.asset + encodeURIComponent(data.filename)];
+      if (layers.length === 1) syncPropsFromLayer(layers[0]);
+      else syncPropsFromLayers(getSelectedLayers());
+      render();
+      await saveTemplate(true);
+    } else {
+      alert(data.error || "Falha no upload");
+    }
+  });
+
+  P("btnDeleteLayer").addEventListener("click", () => {
+    const layers = getSelectedLayers();
+    if (!layers.length) return;
+    const msg = layers.length > 1 ? `Excluir ${layers.length} camadas selecionadas?` : "Excluir esta camada?";
+    if (!confirm(msg)) return;
+    const idsToDelete = new Set(layers.map(l => l.id));
+    T.layers = T.layers.filter(l => !idsToDelete.has(l.id));
+    selectLayer(null);
+    scheduleAutoSave();
+  });
+
+  // ── Nova camada ───────────────────────────────────────────────────────────
+
+  P("btnAddLayer").addEventListener("click", () => {
+    const type = P("newLayerType").value;
+    const n = T.layers.length + 1;
+    const id = `${type}_${n}_${Date.now().toString(36).slice(-4)}`;
+    const base = {
+      id, type, label: `Nova ${type}`, field: type === "text" ? "" : "",
+      static_text: type === "text" ? "Texto" : "", condition: "",
+      x_mm: 5, y_mm: 5, width_mm: 30, height_mm: 8, z_index: T.layers.length,
+      visible: true, multiline: false, fit: "cover",
+      source_image: "", source_gradient: "",
+      style: { font_family: window.CF_FONTS[0] || "Beleren-Bold", font_size_pt: 9,
+               font_weight: "normal", font_style: "normal", color: "#111111",
+               align: "left", vertical_align: "top", letter_spacing_pt: 0, line_height_pt: 0 },
+    };
+    T.layers.push(base);
+    renderLayerList();
+    selectLayer(id);
+    scheduleAutoSave();
+  });
+
+  // ── Uploads ──────────────────────────────────────────────────────────────
+
+  function updateAssetStatus() {
+    const bgLayer = T.layers.find(l => l.type === "background");
+    const bgFile = bgLayer && bgLayer.source_image;
+    const bgEl = document.getElementById("bgStatus");
+    if (bgEl) {
+      bgEl.classList.toggle("set", !!bgFile);
+      bgEl.querySelector(".status-text").textContent = bgFile || "nenhuma imagem definida";
+    }
+    const backFile = T.back_image;
+    const backEl = document.getElementById("backStatus");
+    if (backEl) {
+      backEl.classList.toggle("set", !!backFile);
+      backEl.querySelector(".status-text").textContent = backFile || "nenhuma imagem definida";
+    }
+  }
+
+  function findOrCreateBackgroundLayer() {
+    let bg = T.layers.find(l => l.type === "background");
+    if (!bg) {
+      bg = { id: "background", type: "background", label: "Fundo", field: "", static_text: "",
+             condition: "", x_mm: 0, y_mm: 0, width_mm: T.card.width_mm, height_mm: T.card.height_mm,
+             z_index: -1, visible: true, multiline: false, fit: "cover", source_image: "",
+             source_gradient: "", style: {} };
+      T.layers.push(bg);
+    }
+    return bg;
+  }
+
+  P("bgUpload").addEventListener("change", async evt => {
+    const file = evt.target.files[0];
+    if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(URLS.background, { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      const bg = findOrCreateBackgroundLayer();
+      bg.source_image = data.filename;
+      delete imageCache[URLS.asset + encodeURIComponent(data.filename)];
+      updateAssetStatus();
+      render();
+      await saveTemplate(true);
+    } else {
+      alert(data.error || "Falha no upload");
+    }
+  });
+
+  P("backUpload").addEventListener("change", async evt => {
+    const file = evt.target.files[0];
+    if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(URLS.backImage, { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      T.back_image = data.filename;
+      updateAssetStatus();
+    } else {
+      alert(data.error || "Falha no upload");
+    }
+  });
+
+  P("fontUpload").addEventListener("change", async evt => {
+    const file = evt.target.files[0];
+    if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(URLS.font_upload, { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      window.CF_FONTS = data.fonts;
+      populateFontSelect();
+      document.getElementById("fontCount").textContent = data.fonts.length;
+      alert(`Fonte “${data.family}” disponível. Selecione-a numa camada de texto.`);
+    } else {
+      alert(data.error || "Falha no upload");
+    }
+  });
+
+  // ── Salvar ───────────────────────────────────────────────────────────────
+
+  async function saveTemplate(silent) {
+    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    setSaveStatus("saving");
+    const payload = {
+      meta: { name: NAME, inherits: T.meta && T.meta.parent ? T.meta.parent : null },
+      card: T.card,
+      gradients: T.gradients,
+      layers: T.layers,
+      back_image: T.back_image || "",
+    };
+    let data;
+    try {
+      const res = await fetch(URLS.save, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      data = await res.json();
+    } catch (e) {
+      data = { ok: false, error: "Falha de conexão ao salvar." };
+    }
+    if (data.ok) {
+      isDirty = false;
+      setSaveStatus("saved");
+    } else {
+      setSaveStatus("dirty");
+      alert(data.error || "Erro ao salvar");
+    }
+    return data.ok;
+  }
+
+  P("btnSave").addEventListener("click", () => saveTemplate(false));
+
+  // ── Preview real (renderização PIL do servidor) ─────────────────────────
+
+  P("btnRealPreview").addEventListener("click", async () => {
+    const payload = {
+      row: DEMO_ROW,
+      template: {
+        meta: { name: NAME, inherits: T.meta && T.meta.parent ? T.meta.parent : null },
+        card: T.card, gradients: T.gradients, layers: T.layers, back_image: T.back_image || "",
+      },
+    };
+    const res = await fetch(URLS.preview, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById("previewImg").src = data.image;
+      document.getElementById("previewModal").classList.add("open");
+    } else {
+      alert(data.error || "Erro ao renderizar");
+    }
+  });
+
+  // ── Zoom ─────────────────────────────────────────────────────────────────
+
+  const ZOOM_MIN = 0.25, ZOOM_MAX = 4.0, ZOOM_STEP = 0.25;
+
+  function setZoom(newLevel) {
+    zoomLevel = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, newLevel));
+    const layer = selectedId ? layerById(selectedId) : null;
+    applyZoom();
+    if (layer) render(); // redesenha seleção corretamente na nova escala
+  }
+
+  const zoomInBtn = document.getElementById("zoomIn");
+  const zoomOutBtn = document.getElementById("zoomOut");
+  const zoomResetBtn = document.getElementById("zoomReset");
+  if (zoomInBtn) zoomInBtn.addEventListener("click", () => setZoom(zoomLevel + ZOOM_STEP));
+  if (zoomOutBtn) zoomOutBtn.addEventListener("click", () => setZoom(zoomLevel - ZOOM_STEP));
+  if (zoomResetBtn) zoomResetBtn.addEventListener("click", () => setZoom(1.0));
+
+  // Ctrl/Cmd + roda do mouse sobre o canvas também dá zoom
+  canvas.addEventListener("wheel", evt => {
+    if (!evt.ctrlKey && !evt.metaKey) return;
+    evt.preventDefault();
+    setZoom(zoomLevel + (evt.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+  }, { passive: false });
+
+  // ── Boot ─────────────────────────────────────────────────────────────────
+
+  renderLayerList();
+  updateAssetStatus();
+  render();
+})();

@@ -1,0 +1,9 @@
+{
+  "name": "Genérico RPG 001",
+  "description": "Schema genérico anterior (Cervejaria/Personagem/Item/Local/Habilidade com stats RPG) que ocupava o slug duelo_das_tavernas. Renomeado para preservar os dados de exemplo ao dar lugar ao schema real do jogo \"Duelo das Tavernas — Fermento & Honra\" (ver collection duelo_das_tavernas).",
+  "game": "Genérico RPG 001",
+  "based_on": null,
+  "created_at": 1789155719.4437044,
+  "updated_at": 1789392432.8268576,
+  "identifier_field": "name"
+}

@@ -1,0 +1,10 @@
+# Dependência apenas do processo de build do executável (PyInstaller).
+# Não é necessária pra rodar o CardForge normalmente (python run.py) nem
+# faz parte de requirements.txt por esse motivo.
+#
+# Uso:
+#   pip install -r requirements.txt -r requirements-build.txt
+#   pyinstaller cardforge.spec
+#
+# Ver docs/tech/doc-tecnico-executavel.md.
+pyinstaller>=6.0,<7.0

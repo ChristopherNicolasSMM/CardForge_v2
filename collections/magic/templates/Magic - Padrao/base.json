@@ -1,0 +1,704 @@
+{
+  "meta": {
+    "name": "Magic - Padrao",
+    "inherits": null
+  },
+  "card": {
+    "width_mm": 63,
+    "height_mm": 88,
+    "dpi": 300
+  },
+  "gradients": {
+    "white": {
+      "id": "white",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#F5F5DC"
+        },
+        {
+          "offset": "100%",
+          "color": "#E8E6D0"
+        }
+      ]
+    },
+    "blue": {
+      "id": "blue",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#B0C4DE"
+        },
+        {
+          "offset": "100%",
+          "color": "#7B9EB0"
+        }
+      ]
+    },
+    "black": {
+      "id": "black",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#3A3A3A"
+        },
+        {
+          "offset": "100%",
+          "color": "#1A1A1A"
+        }
+      ]
+    },
+    "red": {
+      "id": "red",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#E34234"
+        },
+        {
+          "offset": "100%",
+          "color": "#B22222"
+        }
+      ]
+    },
+    "green": {
+      "id": "green",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#6B8E23"
+        },
+        {
+          "offset": "100%",
+          "color": "#4A7023"
+        }
+      ]
+    },
+    "gold": {
+      "id": "gold",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#D4AF37"
+        },
+        {
+          "offset": "100%",
+          "color": "#B8860B"
+        }
+      ]
+    },
+    "colorless": {
+      "id": "colorless",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#D0D0D0"
+        },
+        {
+          "offset": "100%",
+          "color": "#A9A9A9"
+        }
+      ]
+    },
+    "artifact": {
+      "id": "artifact",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#C8C8C8"
+        },
+        {
+          "offset": "100%",
+          "color": "#909090"
+        }
+      ]
+    },
+    "Branco": {
+      "id": "Branco",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#FFF9C4"
+        },
+        {
+          "offset": "100%",
+          "color": "#BDB76B"
+        }
+      ]
+    },
+    "Azul": {
+      "id": "Azul",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#42A5F5"
+        },
+        {
+          "offset": "100%",
+          "color": "#263238"
+        }
+      ]
+    },
+    "Preto": {
+      "id": "Preto",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#424242"
+        },
+        {
+          "offset": "100%",
+          "color": "#000000"
+        }
+      ]
+    },
+    "Vermelho": {
+      "id": "Vermelho",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#F44336"
+        },
+        {
+          "offset": "100%",
+          "color": "#B71C1C"
+        }
+      ]
+    },
+    "Verde": {
+      "id": "Verde",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#4CAF50"
+        },
+        {
+          "offset": "100%",
+          "color": "#2E7D32"
+        }
+      ]
+    },
+    "Ouro": {
+      "id": "Ouro",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#FFD700"
+        },
+        {
+          "offset": "100%",
+          "color": "#FF8C00"
+        }
+      ]
+    },
+    "Incolor": {
+      "id": "Incolor",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#8B8B8B"
+        },
+        {
+          "offset": "100%",
+          "color": "#4A4A4A"
+        }
+      ]
+    },
+    "Artefato": {
+      "id": "Artefato",
+      "stops": [
+        {
+          "offset": "0%",
+          "color": "#D2B48C"
+        },
+        {
+          "offset": "100%",
+          "color": "#A0522D"
+        }
+      ]
+    }
+  },
+  "layers": [
+    {
+      "id": "fundo",
+      "type": "background",
+      "label": "Fundo (cor da carta)",
+      "field": "",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 0,
+      "y_mm": 0,
+      "width_mm": 63,
+      "height_mm": 88,
+      "z_index": 0,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 8,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "arte",
+      "type": "image",
+      "label": "Arte",
+      "field": "art",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 4,
+      "y_mm": 9,
+      "width_mm": 55,
+      "height_mm": 38,
+      "z_index": 1,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 8,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "caixa_nome",
+      "type": "background",
+      "label": "Caixa do nome",
+      "field": "",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 3,
+      "y_mm": 3.5,
+      "width_mm": 57,
+      "height_mm": 5.5,
+      "z_index": 2,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "stretch",
+      "source_image": "papel.png",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 8,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "nome_carta",
+      "type": "text",
+      "label": "Nome",
+      "field": "name",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 4,
+      "y_mm": 3.6,
+      "width_mm": 36,
+      "height_mm": 5.3,
+      "z_index": 3,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 10,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "middle",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "custo_mana",
+      "type": "mana",
+      "label": "Custo de mana",
+      "field": "mana_cost",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 41,
+      "y_mm": 3.6,
+      "width_mm": 18,
+      "height_mm": 5.3,
+      "z_index": 3,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 8,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "right",
+        "vertical_align": "middle",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "caixa_tipo",
+      "type": "background",
+      "label": "Caixa do tipo",
+      "field": "",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 3,
+      "y_mm": 48.5,
+      "width_mm": 57,
+      "height_mm": 4.5,
+      "z_index": 2,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "stretch",
+      "source_image": "papel.png",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 8,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "tipo_carta",
+      "type": "text",
+      "label": "Linha de tipo",
+      "field": "type_line",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 4,
+      "y_mm": 48.6,
+      "width_mm": 55,
+      "height_mm": 4.3,
+      "z_index": 3,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 6.5,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "middle",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "caixa_texto",
+      "type": "background",
+      "label": "Caixa de texto",
+      "field": "",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 3,
+      "y_mm": 54,
+      "width_mm": 57,
+      "height_mm": 24,
+      "z_index": 2,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "stretch",
+      "source_image": "papel.png",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 8,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "texto_regras",
+      "type": "text",
+      "label": "Texto de regras",
+      "field": "rules_text",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 4.5,
+      "y_mm": 55,
+      "width_mm": 54,
+      "height_mm": 13,
+      "z_index": 3,
+      "visible": true,
+      "multiline": true,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 6.5,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 8
+      }
+    },
+    {
+      "id": "texto_sabor",
+      "type": "text",
+      "label": "Texto de sabor (flavor)",
+      "field": "flavor_text",
+      "static_text": "",
+      "condition": "has_flavor",
+      "x_mm": 4.5,
+      "y_mm": 69,
+      "width_mm": 54,
+      "height_mm": 8,
+      "z_index": 3,
+      "visible": true,
+      "multiline": true,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 6.5,
+        "font_weight": "normal",
+        "font_style": "italic",
+        "color": "#333333",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 8
+      }
+    },
+    {
+      "id": "caixa_pt",
+      "type": "background",
+      "label": "Caixa Força/Resistência",
+      "field": "",
+      "static_text": "",
+      "condition": "has_pt",
+      "x_mm": 44,
+      "y_mm": 78.3,
+      "width_mm": 16,
+      "height_mm": 6,
+      "z_index": 3,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "stretch",
+      "source_image": "papel.png",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 8,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "forca_resistencia",
+      "type": "text",
+      "label": "Força/Resistência",
+      "field": "forca_resistencia",
+      "static_text": "",
+      "condition": "has_pt",
+      "x_mm": 44,
+      "y_mm": 78.3,
+      "width_mm": 16,
+      "height_mm": 6,
+      "z_index": 4,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Beleren-Bold",
+        "font_size_pt": 9,
+        "font_weight": "bold",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "center",
+        "vertical_align": "middle",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "caixa_rodape",
+      "type": "background",
+      "label": "Caixa do rodapé",
+      "field": "",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 3,
+      "y_mm": 83.8,
+      "width_mm": 57,
+      "height_mm": 3.6,
+      "z_index": 2,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "stretch",
+      "source_image": "papel.png",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 8,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "top",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "rodape_artista",
+      "type": "text",
+      "label": "Artista",
+      "field": "artist",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 4,
+      "y_mm": 83.9,
+      "width_mm": 24,
+      "height_mm": 3.4,
+      "z_index": 3,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 3,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "left",
+        "vertical_align": "middle",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "rodape_edicao",
+      "type": "text",
+      "label": "Edição",
+      "field": "edicao",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 27,
+      "y_mm": 83.9,
+      "width_mm": 20,
+      "height_mm": 3.4,
+      "z_index": 3,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 3,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "center",
+        "vertical_align": "middle",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    },
+    {
+      "id": "rodape_raridade",
+      "type": "text",
+      "label": "Raridade",
+      "field": "rarity",
+      "static_text": "",
+      "condition": "",
+      "x_mm": 47,
+      "y_mm": 83.9,
+      "width_mm": 12,
+      "height_mm": 3.4,
+      "z_index": 3,
+      "visible": true,
+      "multiline": false,
+      "locked": false,
+      "fit": "cover",
+      "source_image": "",
+      "source_gradient": "",
+      "style": {
+        "font_family": "Mplantin",
+        "font_size_pt": 3,
+        "font_weight": "normal",
+        "font_style": "normal",
+        "color": "#111111",
+        "align": "right",
+        "vertical_align": "middle",
+        "letter_spacing_pt": 0,
+        "line_height_pt": 0
+      }
+    }
+  ],
+  "back_image": ""
+}

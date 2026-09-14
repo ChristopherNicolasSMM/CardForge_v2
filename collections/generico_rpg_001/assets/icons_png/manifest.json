@@ -1,0 +1,122 @@
+[
+  {
+    "notation": "fogo",
+    "file": "icone_01_fogo.png",
+    "category": "Duelo das Tavernas",
+    "label": "Fogo"
+  },
+  {
+    "notation": "lupulo",
+    "file": "icone_02_lupulo.png",
+    "category": "Duelo das Tavernas",
+    "label": "Lúpulo"
+  },
+  {
+    "notation": "trigo",
+    "file": "icone_03_trigo.png",
+    "category": "Duelo das Tavernas",
+    "label": "Trigo"
+  },
+  {
+    "notation": "agua",
+    "file": "icone_04_agua.png",
+    "category": "Duelo das Tavernas",
+    "label": "Água"
+  },
+  {
+    "notation": "sol",
+    "file": "icone_05_sol.png",
+    "category": "Duelo das Tavernas",
+    "label": "Sol"
+  },
+  {
+    "notation": "gelo",
+    "file": "icone_06_gelo.png",
+    "category": "Duelo das Tavernas",
+    "label": "Gelo"
+  },
+  {
+    "notation": "folha",
+    "file": "icone_07_folha.png",
+    "category": "Duelo das Tavernas",
+    "label": "Folha"
+  },
+  {
+    "notation": "caveira",
+    "file": "icone_08_caveira.png",
+    "category": "Duelo das Tavernas",
+    "label": "Caveira"
+  },
+  {
+    "notation": "pocao",
+    "file": "icone_09_pocao.png",
+    "category": "Duelo das Tavernas",
+    "label": "Poção"
+  },
+  {
+    "notation": "estrela",
+    "file": "icone_10_estrela.png",
+    "category": "Duelo das Tavernas",
+    "label": "Estrela"
+  },
+  {
+    "notation": "espadas",
+    "file": "icone_11_espadas.png",
+    "category": "Duelo das Tavernas",
+    "label": "Espadas"
+  },
+  {
+    "notation": "escudo",
+    "file": "icone_12_escudo.png",
+    "category": "Duelo das Tavernas",
+    "label": "Escudo"
+  },
+  {
+    "notation": "coracao",
+    "file": "icone_13_coracao.png",
+    "category": "Duelo das Tavernas",
+    "label": "Coração"
+  },
+  {
+    "notation": "montanha",
+    "file": "icone_14_montanha.png",
+    "category": "Duelo das Tavernas",
+    "label": "Montanha"
+  },
+  {
+    "notation": "arvore",
+    "file": "icone_15_arvore.png",
+    "category": "Duelo das Tavernas",
+    "label": "Árvore"
+  },
+  {
+    "notation": "sol_raios",
+    "file": "icone_16_sol_raios.png",
+    "category": "Duelo das Tavernas",
+    "label": "Sol (raios)"
+  },
+  {
+    "notation": "pergaminho",
+    "file": "icone_17_pergaminho.png",
+    "category": "Duelo das Tavernas",
+    "label": "Pergaminho"
+  },
+  {
+    "notation": "engrenagem",
+    "file": "icone_18_engrenagem.png",
+    "category": "Duelo das Tavernas",
+    "label": "Engrenagem"
+  },
+  {
+    "notation": "olho",
+    "file": "icone_19_olho.png",
+    "category": "Duelo das Tavernas",
+    "label": "Olho"
+  },
+  {
+    "notation": "espiral",
+    "file": "icone_20_espiral.png",
+    "category": "Duelo das Tavernas",
+    "label": "Espiral"
+  }
+]

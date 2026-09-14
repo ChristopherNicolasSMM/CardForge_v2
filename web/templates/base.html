@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CardForge{% endblock %} · CardForge</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
+  <link rel="icon" href="{{ url_for('static', filename='favicon-32.png') }}" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon-180.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="shell" id="cfShell">
+    <aside class="rail">
+      <button type="button" class="rail-toggle" id="railToggle" title="Recolher/expandir menu" aria-label="Recolher/expandir menu">⟨</button>
+      <div class="rail-brand"><span class="mark">⚒</span> <span class="rail-brand-text">CardForge <span class="ver">2.0</span></span></div>
+
+      <a href="{{ url_for('collections_bp.index') }}" class="rail-collection">
+        <span class="rail-collection-label">coleção ativa</span>
+        <span class="rail-collection-name">
+          {% if g.collection %}
+            {{ g.collections_list|selectattr('slug','equalto',g.collection)|map(attribute='name')|first or g.collection }}
+          {% else %}
+            nenhuma — escolher
+          {% endif %}
+        </span>
+      </a>
+
+      <nav>
+        <a href="{{ url_for('main.hub') }}" class="{{ 'active' if request.endpoint == 'main.hub' }}" title="Início">
+          <span class="rail-icon">◆</span> <span class="rail-label">Início</span></a>
+        <a href="{{ url_for('collections_bp.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('collections_bp') }}" title="Coleções">
+          <span class="rail-icon">▣</span> <span class="rail-label">Coleções</span></a>
+        <a href="{{ url_for('templates_bp.gallery') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('templates_bp') }}" title="Templates">
+          <span class="rail-icon">▦</span> <span class="rail-label">Templates</span></a>
+        <a href="{{ url_for('data_bp.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('data_bp') }}" title="Dados">
+          <span class="rail-icon">☰</span> <span class="rail-label">Dados</span></a>
+        <a href="{{ url_for('generate_bp.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('generate_bp') }}" title="Gerar">
+          <span class="rail-icon">▶</span> <span class="rail-label">Gerar</span></a>
+        <a href="{{ url_for('proxy_bp.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('proxy_bp') }}" title="Proxy / PDF">
+          <span class="rail-icon">▤</span> <span class="rail-label">Proxy / PDF</span></a>
+        <a href="{{ url_for('wiki_bp.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('wiki_bp') }}" title="Manual">
+          <span class="rail-icon">?</span> <span class="rail-label">Manual</span></a>
+      </nav>
+      <div class="rail-foot">Motor de cards para jogos de carta customizados.</div>
+    </aside>
+    <main class="main {% block main_class %}{% endblock %}">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flashes">
+            {% for category, msg in messages %}
+              <div class="flash {{ category }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script>
+    // Menu lateral recolhível — estado persiste entre páginas via localStorage
+    // (cada navegação é um reload de página normal, sem isso ele voltaria a
+    // expandir toda vez).
+    (function () {
+      var KEY = "cf_rail_collapsed";
+      var shell = document.getElementById("cfShell");
+      var toggle = document.getElementById("railToggle");
+      if (localStorage.getItem(KEY) === "1") shell.classList.add("rail-collapsed");
+      toggle.addEventListener("click", function () {
+        var collapsed = shell.classList.toggle("rail-collapsed");
+        localStorage.setItem(KEY, collapsed ? "1" : "0");
+      });
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

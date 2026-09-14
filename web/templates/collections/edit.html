@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Editar coleção{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">editar coleção</span>
+      <h1>{{ meta.name }}</h1>
+    </div>
+  </div>
+
+  <div class="panel" style="max-width: 520px;">
+    <form method="post">
+      <div class="field">
+        <label for="name">Nome da coleção</label>
+        <input type="text" id="name" name="name" required value="{{ meta.name }}">
+      </div>
+      <div class="field">
+        <label for="game">Jogo</label>
+        <input type="text" id="game" name="game" value="{{ meta.game }}">
+      </div>
+      <div class="field">
+        <label for="description">Descrição</label>
+        <textarea id="description" name="description">{{ meta.description }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar alterações</button>
+      <a href="{{ url_for('collections_bp.index') }}" class="btn btn-ghost">Cancelar</a>
+    </form>
+  </div>
+{% endblock %}
