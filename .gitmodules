@@ -1,3 +1,6 @@
 [submodule "collections/duelo_das_tavernas"]
 	path = collections/duelo_das_tavernas
 	url = https://github.com/ChristopherNicolasSMM/Duelo_das_Tavernas-CardForge-SubModule.git
+[submodule "collections/valirian"]
+	path = collections/valirian
+	url = https://github.com/ChristopherNicolasSMM/VALIRIAN-CardForge-SubModule.git

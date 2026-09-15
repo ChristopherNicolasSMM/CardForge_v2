@@ -24,7 +24,7 @@ collections/*/output/
 
 #------.> Rótulos Valirian -> 
 #Inicialmente fazia parte do projeto, porém removido por hora.
-/collections/valirian/
+#/collections/valirian/
 
 #Ignorar
 /collections/Collections CardForge2.1.0.zip
