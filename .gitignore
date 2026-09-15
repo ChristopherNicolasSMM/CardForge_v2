@@ -19,10 +19,12 @@ collections/*/output/
 #   COLEÇÕES A IGNORAR
 ########################################################################
 #------.> Duelo das Tavernas
-#Teste profundo do CardForge em cenário real
-#Cenário da Ludus Arcanum -> Propriedade de licença então não deve subir...
-/collections/duelo_das_tavernas/
+#submodulo 
+#/collections/duelo_das_tavernas/
+
 #------.> Rótulos Valirian -> 
 #Inicialmente fazia parte do projeto, porém removido por hora.
 /collections/valirian/
 
+#Ignorar
+/collections/Collections CardForge2.1.0.zip
