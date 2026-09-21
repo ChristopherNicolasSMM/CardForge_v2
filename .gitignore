@@ -15,16 +15,5 @@ collections/*/output/
 #Geração de patch
 *.patch
 
-########################################################################
-#   COLEÇÕES A IGNORAR
-########################################################################
-#------.> Duelo das Tavernas
-#submodulo 
-#/collections/duelo_das_tavernas/
-
-#------.> Rótulos Valirian -> 
-#Inicialmente fazia parte do projeto, porém removido por hora.
-#/collections/valirian/
-
 #Ignorar
 /collections/Collections CardForge2.1.0.zip
