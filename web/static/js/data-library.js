@@ -3,9 +3,11 @@
 
   const URLS = window.CF_URLS;
   let images = [];
+  let folders = [];
+  let currentFolder = "";
   let replaceTarget = null;
 
-  function encodedName(name) { return encodeURIComponent(name); }
+  function encodedName(name) { return name.split("/").map(encodeURIComponent).join("/"); }
   function escapeHtml(value) {
     return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
@@ -30,14 +32,22 @@
   activateTab(initialTab);
 
   async function loadImages() {
-    const response = await fetch(URLS.library);
-    images = response.ok ? await response.json() : [];
+    const [imageResponse, folderResponse] = await Promise.all([fetch(URLS.library), fetch(URLS.libraryFolders)]);
+    images = imageResponse.ok ? await imageResponse.json() : [];
+    folders = folderResponse.ok ? await folderResponse.json() : [];
     renderImages();
   }
 
   function renderImages() {
     const query = document.getElementById("imageSearch").value.trim().toLowerCase();
-    const filtered = images.filter(item => item.filename.toLowerCase().includes(query));
+    const prefix = currentFolder ? `${currentFolder}/` : "";
+    const filtered = images.filter(item => {
+      if (query) return item.filename.toLowerCase().includes(query);
+      const relative = item.filename.slice(prefix.length);
+      return item.filename.startsWith(prefix) && !relative.includes("/");
+    });
+    renderFolders(query);
+    renderBreadcrumb();
     const grid = document.getElementById("imageLibraryGrid");
     document.getElementById("imageLibraryEmpty").hidden = filtered.length > 0;
     grid.innerHTML = filtered.map(item => `
@@ -47,10 +57,45 @@
         <div class="image-card-actions">
           <button class="btn btn-sm" type="button" data-action="replace" data-name="${escapeHtml(item.filename)}">Substituir</button>
           <button class="btn btn-sm" type="button" data-action="rename" data-name="${escapeHtml(item.filename)}">Renomear</button>
+          <button class="btn btn-sm" type="button" data-action="move" data-name="${escapeHtml(item.filename)}">Mover</button>
           <button class="btn btn-sm btn-danger" type="button" data-action="delete" data-name="${escapeHtml(item.filename)}">Apagar</button>
         </div>
       </article>`).join("");
   }
+
+  function renderFolders(query) {
+    const prefix = currentFolder ? `${currentFolder}/` : "";
+    const visible = query ? [] : folders.filter(folder => {
+      const relative = folder.slice(prefix.length);
+      return folder.startsWith(prefix) && relative && !relative.includes("/");
+    });
+    document.getElementById("folderGrid").innerHTML = visible.map(folder => {
+      const label = folder.split("/").pop();
+      return `<button type="button" class="folder-card" data-folder="${escapeHtml(folder)}"><span>📁</span><strong>${escapeHtml(label)}</strong></button>`;
+    }).join("");
+  }
+
+  function renderBreadcrumb() {
+    const parts = currentFolder ? currentFolder.split("/") : [];
+    const crumbs = [{ label: "Imagens", path: "" }];
+    parts.forEach((part, index) => crumbs.push({ label: part, path: parts.slice(0, index + 1).join("/") }));
+    document.getElementById("folderBreadcrumb").innerHTML = crumbs.map((crumb, index) =>
+      `${index ? '<span>›</span>' : ''}<button type="button" data-folder="${escapeHtml(crumb.path)}">${escapeHtml(crumb.label)}</button>`
+    ).join("");
+  }
+
+  function openFolder(path) {
+    currentFolder = path;
+    document.getElementById("imageSearch").value = "";
+    renderImages();
+  }
+
+  document.getElementById("folderGrid").addEventListener("click", event => {
+    const button = event.target.closest("button[data-folder]"); if (button) openFolder(button.dataset.folder);
+  });
+  document.getElementById("folderBreadcrumb").addEventListener("click", event => {
+    const button = event.target.closest("button[data-folder]"); if (button) openFolder(button.dataset.folder);
+  });
 
   document.getElementById("imageLibraryGrid").addEventListener("click", async event => {
     const button = event.target.closest("button[data-action]");
@@ -66,18 +111,32 @@
       document.getElementById("imageReplaceInput").click();
     } else if (button.dataset.action === "rename") {
       await renameImage(name);
+    } else if (button.dataset.action === "move") {
+      await moveImage(name);
     } else if (button.dataset.action === "delete") {
       await deleteImage(name);
     }
   });
 
   document.getElementById("imageSearch").addEventListener("input", renderImages);
+  document.getElementById("btnNewFolder").addEventListener("click", async () => {
+    const name = prompt(`Nome da nova pasta dentro de ${currentFolder || "Imagens"}:`);
+    if (!name) return;
+    const response = await fetch(URLS.libraryFolders, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parent: currentFolder, name: name.trim() })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) return alert(result.error || "Falha ao criar a pasta.");
+    await loadImages();
+  });
   document.getElementById("btnAddImages").addEventListener("click", () => document.getElementById("imageUploadInput").click());
   document.getElementById("imageUploadInput").addEventListener("change", async event => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
     const body = new FormData();
     files.forEach(file => body.append("files", file));
+    body.append("folder", currentFolder);
     const response = await fetch(URLS.artUpload, { method: "POST", body });
     const result = await response.json();
     event.target.value = "";
@@ -123,6 +182,21 @@
     const result = await response.json();
     if (!response.ok || !result.ok) return alert(result.error || "Falha ao apagar a imagem.");
     await loadImages();
+  }
+
+  async function moveImage(name) {
+    const choices = ["", ...folders];
+    const list = choices.map((folder, index) => `${index}: ${folder || "Imagens (raiz)"}`).join("\n");
+    const selected = prompt(`Mover para qual pasta? Informe o número:\n\n${list}`);
+    if (selected === null) return;
+    const index = Number(selected);
+    if (!Number.isInteger(index) || index < 0 || index >= choices.length) return alert("Pasta inválida.");
+    const response = await fetch(`${URLS.library}/${encodedName(name)}/move`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder: choices[index] })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) return alert(result.error || "Falha ao mover a imagem.");
+    location.hash = "images"; location.reload();
   }
 
   document.getElementById("btnCloseLibModal").addEventListener("click", () => document.getElementById("libModal").classList.remove("open"));

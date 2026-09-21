@@ -41,7 +41,7 @@
   // auto-save continuarem batendo com a linha certa independente do filtro
   // ou de qual página está sendo exibida.
   let filterText = "";
-  let pageSize = 50; // número, ou "all"
+  let pageSize = 20;
   let currentPage = 1;
 
   function filteredIndices() {
@@ -141,8 +141,8 @@
         if (col === "art") {
           const val = row.art || "";
           const normalized = String(val).replace(/\\/g, "/");
-          const filename = normalized.split("/").pop();
-          const thumbUrl = val ? (val.startsWith("http") ? val : `/data/library/${encodeURIComponent(filename)}`) : "";
+          const encodedPath = normalized.split("/").map(encodeURIComponent).join("/");
+          const thumbUrl = val ? (val.startsWith("http") ? val : `/data/library/${encodedPath}`) : "";
           return `<td>
             <div class="art-cell">
               ${thumbUrl ? `<img src="${thumbUrl}" alt="">` : ""}
@@ -198,10 +198,10 @@
   function renderPagination(filteredCount, totalPages) {
     const box = document.getElementById("tablePagination");
     if (!box) return;
-    if (pageSize === "all" || filteredCount === 0) {
+    if (filteredCount === 0) {
       box.innerHTML = filteredCount === 0
         ? `<span>Nenhuma linha bate com o filtro.</span>`
-        : `<span>Mostrando todas as ${filteredCount} linha(s).</span>`;
+        : "";
       return;
     }
     const start = (currentPage - 1) * pageSize + 1;

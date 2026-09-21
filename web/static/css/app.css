@@ -127,6 +127,15 @@
   min-height: 120px;
   overflow-y: auto;
 }
+.main.main-fill .data-tab-panel.active {
+  min-height: 0;
+}
+.main.main-fill #tab-dataset.active .panel-fill .table-wrap {
+  flex: none;
+  height: clamp(300px, 52vh, 620px);
+  max-height: 620px;
+  overflow: auto;
+}
 
 .page-head {
   display: flex; align-items: flex-end; justify-content: space-between;
@@ -450,6 +459,15 @@ table.data-table tr:hover td { background: rgba(255,255,255,0.015); }
 .image-library-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px;
 }
+.folder-breadcrumb { display: flex; align-items: center; gap: 6px; margin-top: 14px; color: var(--parchment-lo); }
+.folder-breadcrumb button { padding: 2px 0; border: 0; background: transparent; color: var(--temper-hi); cursor: pointer; }
+.folder-breadcrumb button:hover { color: var(--ember-hi); }
+.folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.folder-card {
+  display: flex; align-items: center; gap: 9px; padding: 12px; cursor: pointer;
+  color: var(--parchment); background: var(--iron-panel); border: 1px solid var(--iron-line); border-radius: var(--radius-md); text-align: left;
+}
+.folder-card:hover { border-color: var(--ember); }
 .image-library-card {
   min-width: 0; overflow: hidden; background: var(--iron-panel);
   border: 1px solid var(--iron-line); border-radius: var(--radius-md);
@@ -461,8 +479,12 @@ table.data-table tr:hover td { background: rgba(255,255,255,0.015); }
 .image-card-body span { color: var(--parchment-lo); font-size: .72rem; }
 .image-card-actions { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 10px 10px; }
 .image-card-actions .btn { flex: 1 1 auto; padding-left: 6px; padding-right: 6px; }
-.image-view-modal { width: min(900px, 92vw); }
-.image-view-modal img { display: block; max-width: 100%; max-height: 65vh; margin: auto; object-fit: contain; }
+.image-view-modal { width: min(900px, 92vw); padding: 24px; }
+.image-view-modal h3 { margin: 0 0 16px; }
+.image-view-modal img {
+  display: block; box-sizing: border-box; max-width: calc(100% - 24px); max-height: 58vh;
+  margin: 12px auto 18px; padding: 8px; object-fit: contain; background: var(--iron); border-radius: 4px;
+}
 .simulate-panel { max-width: 920px; }
 .simulate-controls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
 .simulate-controls label { display: flex; flex-direction: column; gap: 6px; color: var(--parchment-lo); font-size: .78rem; }

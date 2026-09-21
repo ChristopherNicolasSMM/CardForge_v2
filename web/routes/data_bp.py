@@ -103,9 +103,10 @@ def art_upload():
     if not files:
         return jsonify({"ok": False, "error": "Nenhum arquivo enviado"}), 400
     saved = []
+    folder = (request.form.get("folder") or "").strip()
     try:
         for file in files:
-            fname = assets_service.save_library_image(file, g.collection)
+            fname = assets_service.save_library_image(file, g.collection, folder=folder)
             saved.append({"filename": fname,
                           "url": url_for("data_bp.library_file", filename=fname)})
     except ValueError as e:
@@ -123,6 +124,23 @@ def library():
          "usage_count": len(assets_service.find_image_references(dataset, f))}
         for f in files
     ])
+
+
+@bp.route("/library-folders")
+def library_folders():
+    return jsonify(assets_service.list_library_folders(g.collection))
+
+
+@bp.route("/library-folders", methods=["POST"])
+def library_folder_create():
+    payload = request.get_json(force=True, silent=True) or {}
+    try:
+        folder = assets_service.create_library_folder(
+            g.collection, payload.get("parent") or "", payload.get("name") or ""
+        )
+    except (ValueError, OSError) as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    return jsonify({"ok": True, "folder": folder})
 
 
 @bp.route("/library/<path:filename>")
@@ -159,6 +177,24 @@ def library_rename(filename):
             sd.save_dataset(dataset.get("columns") or [], dataset.get("rows") or [])
     except FileNotFoundError:
         return jsonify({"ok": False, "error": "Imagem não encontrada."}), 404
+    except (ValueError, OSError) as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    return jsonify({"ok": True, "filename": new_name, "updated_references": updated})
+
+
+@bp.route("/library/<path:filename>/move", methods=["POST"])
+def library_move(filename):
+    payload = request.get_json(force=True, silent=True) or {}
+    dataset = sd.load_dataset()
+    try:
+        new_name = assets_service.move_library_image(
+            g.collection, filename, payload.get("folder") or ""
+        )
+        updated = assets_service.rename_image_references(dataset, filename, new_name)
+        if updated:
+            sd.save_dataset(dataset.get("columns") or [], dataset.get("rows") or [])
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "Imagem ou pasta não encontrada."}), 404
     except (ValueError, OSError) as e:
         return jsonify({"ok": False, "error": str(e)}), 400
     return jsonify({"ok": True, "filename": new_name, "updated_references": updated})

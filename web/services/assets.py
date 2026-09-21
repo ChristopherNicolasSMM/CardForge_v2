@@ -11,7 +11,7 @@ from werkzeug.datastructures import FileStorage
 
 from web.services import collections
 from core.render.font_paths import list_available_fonts
-from core.asset_paths import asset_reference_basename, normalize_asset_reference
+from core.asset_paths import normalize_asset_reference
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 FONT_EXTS = {".ttf"}
@@ -23,12 +23,28 @@ def _safe_stem(name: str) -> str:
     return stem
 
 
-def save_library_image(file: FileStorage, collection_slug: str) -> str:
+def _library_relative_path(collection_slug: str, reference: str, *, allow_directory: bool = False) -> tuple[Path, str]:
+    normalized = normalize_asset_reference(reference)
+    if not normalized:
+        if allow_directory and not str(reference or "").strip():
+            return collections.library_dir(collection_slug), ""
+        raise ValueError("Caminho inválido.")
+    root = collections.library_dir(collection_slug).resolve()
+    path = (root / Path(*normalized.split("/"))).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        raise ValueError("Caminho inválido.")
+    return path, normalized
+
+
+def save_library_image(file: FileStorage, collection_slug: str, folder: str = "") -> str:
     """Salva imagem na biblioteca da coleção. Retorna o nome do arquivo salvo."""
     ext = Path(file.filename or "").suffix.lower()
     if ext not in IMAGE_EXTS:
         raise ValueError(f"Formato de imagem não suportado: {ext or '(sem extensão)'}")
-    lib = collections.library_dir(collection_slug)
+    lib, folder_ref = _library_relative_path(collection_slug, folder, allow_directory=True)
+    lib.mkdir(parents=True, exist_ok=True)
     stem = _safe_stem(file.filename)
     fname = f"{stem}{ext}"
     number = 2
@@ -37,22 +53,39 @@ def save_library_image(file: FileStorage, collection_slug: str) -> str:
         number += 1
     dest = lib / fname
     file.save(dest)
-    return fname
+    return f"{folder_ref}/{fname}" if folder_ref else fname
 
 
 def list_library_images(collection_slug: str) -> list[str]:
     lib = collections.library_dir(collection_slug)
     if not lib.exists():
         return []
-    return sorted(p.name for p in lib.iterdir() if p.suffix.lower() in IMAGE_EXTS)
+    return sorted(
+        p.relative_to(lib).as_posix()
+        for p in lib.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+    )
+
+
+def list_library_folders(collection_slug: str) -> list[str]:
+    lib = collections.library_dir(collection_slug)
+    return sorted(p.relative_to(lib).as_posix() for p in lib.rglob("*") if p.is_dir())
+
+
+def create_library_folder(collection_slug: str, parent: str, name: str) -> str:
+    if not str(name or "").strip():
+        raise ValueError("Informe o nome da pasta.")
+    safe_name = _safe_stem(name)
+    parent_path, parent_ref = _library_relative_path(collection_slug, parent, allow_directory=True)
+    target = parent_path / safe_name
+    if target.exists():
+        raise ValueError("Já existe uma pasta com esse nome.")
+    target.mkdir(parents=False)
+    return f"{parent_ref}/{safe_name}" if parent_ref else safe_name
 
 
 def library_image_path(collection_slug: str, filename: str) -> Path:
     """Resolve somente nomes de arquivos pertencentes à biblioteca ativa."""
-    normalized = normalize_asset_reference(filename)
-    if not normalized or "/" in normalized:
-        raise ValueError("Nome de imagem inválido.")
-    path = collections.library_dir(collection_slug) / normalized
+    path, normalized = _library_relative_path(collection_slug, filename)
     if path.suffix.lower() not in IMAGE_EXTS:
         raise ValueError("Formato de imagem não suportado.")
     return path
@@ -92,12 +125,12 @@ def image_reference_matches(value: object, filename: str) -> bool:
     normalized = normalize_asset_reference(value)
     if not normalized:
         return False
-    if normalized == filename:
+    target = normalize_asset_reference(filename)
+    if not target:
+        return False
+    if normalized == target:
         return True
-    parts = normalized.split("/")
-    return asset_reference_basename(normalized) == filename and any(
-        part.lower() in {"library", "imgs"} for part in parts[:-1]
-    )
+    return normalized in {f"assets/library/{target}", f"library/{target}", f"imgs/{target}"}
 
 
 def find_image_references(dataset: dict, filename: str) -> list[dict]:
@@ -123,15 +156,33 @@ def rename_library_image(collection_slug: str, old_name: str, requested_name: st
     source = library_image_path(collection_slug, old_name)
     if not source.exists():
         raise FileNotFoundError(old_name)
+    old_ref = normalize_asset_reference(old_name)
+    old_parent = old_ref.rsplit("/", 1)[0] if "/" in old_ref else ""
     requested = Path(requested_name.strip()).name
     stem = _safe_stem(requested)
     requested_ext = Path(requested).suffix.lower()
     if requested_ext and requested_ext != source.suffix.lower():
         raise ValueError("Para renomear, mantenha a extensão original da imagem.")
-    new_name = f"{stem}{source.suffix.lower()}"
+    basename = f"{stem}{source.suffix.lower()}"
+    new_name = f"{old_parent}/{basename}" if old_parent else basename
     target = library_image_path(collection_slug, new_name)
     if target != source and target.exists():
         raise ValueError("Já existe uma imagem com esse nome.")
+    source.rename(target)
+    return new_name
+
+
+def move_library_image(collection_slug: str, filename: str, folder: str) -> str:
+    source = library_image_path(collection_slug, filename)
+    if not source.exists():
+        raise FileNotFoundError(filename)
+    folder_path, folder_ref = _library_relative_path(collection_slug, folder, allow_directory=True)
+    if not folder_path.is_dir():
+        raise ValueError("Pasta de destino não encontrada.")
+    new_name = f"{folder_ref}/{source.name}" if folder_ref else source.name
+    target = library_image_path(collection_slug, new_name)
+    if target != source and target.exists():
+        raise ValueError("Já existe uma imagem com esse nome na pasta de destino.")
     source.rename(target)
     return new_name
 
