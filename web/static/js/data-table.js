@@ -24,6 +24,11 @@
     try {
       const res = await fetch(URLS.templatesList);
       templateOptions = await res.json();
+      const previewSelect = document.getElementById("previewTemplate");
+      if (previewSelect) {
+        previewSelect.innerHTML = templateOptions.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("")
+          || '<option value="">— nenhum template —</option>';
+      }
     } catch (e) {
       templateOptions = [];
     }
@@ -135,7 +140,9 @@
       const cells = columns.map(col => {
         if (col === "art") {
           const val = row.art || "";
-          const thumbUrl = val ? (val.startsWith("http") ? val : `/data/library/${encodeURIComponent(val)}`) : "";
+          const normalized = String(val).replace(/\\/g, "/");
+          const filename = normalized.split("/").pop();
+          const thumbUrl = val ? (val.startsWith("http") ? val : `/data/library/${encodeURIComponent(filename)}`) : "";
           return `<td>
             <div class="art-cell">
               ${thumbUrl ? `<img src="${thumbUrl}" alt="">` : ""}
@@ -409,7 +416,8 @@
     const idx = document.getElementById("previewRow").value;
     if (!tpl || idx === "") { alert("Escolha um template e um card."); return; }
     const row = rows[+idx];
-    const res = await fetch(`/templates/${encodeURIComponent(tpl)}/preview`, {
+    const templatePath = tpl.split("/").map(encodeURIComponent).join("/");
+    const res = await fetch(`/templates/${templatePath}/preview`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ row }),
     });
@@ -417,7 +425,9 @@
     if (data.ok) {
       const img = document.getElementById("previewRowImg");
       img.src = data.image;
-      img.style.display = "block";
+      img.hidden = false;
+      const placeholder = document.getElementById("previewPlaceholder");
+      if (placeholder) placeholder.hidden = true;
     } else {
       alert(data.error || "Erro ao renderizar");
     }

@@ -370,14 +370,28 @@ class PreviewRenderer:
         estar: dentro da pasta do template, na biblioteca de imagens da
         coleção ativa (assets/library/, onde a tela de Dados salva os
         uploads), e por fim no diretório de trabalho do processo."""
-        candidates = [self.template_dir / value]
+        from core.asset_paths import contained_candidate, asset_reference_basename
+
+        candidates = []
+        candidate = contained_candidate(self.template_dir, value)
+        if candidate:
+            candidates.append(candidate)
         # collections/<coleção>/templates/<nome> -> collections/<coleção>/assets/library
         try:
             collection_dir = self.template_dir.parent.parent
-            candidates.append(collection_dir / "assets" / "library" / value)
+            for root, ref in (
+                (collection_dir, value),
+                (collection_dir / "assets" / "library", value),
+                (collection_dir / "assets" / "library", asset_reference_basename(value)),
+            ):
+                candidate = contained_candidate(root, ref)
+                if candidate:
+                    candidates.append(candidate)
         except Exception:
             pass
-        candidates.append(Path(".") / value)
+        candidate = contained_candidate(Path("."), value)
+        if candidate:
+            candidates.append(candidate)
         for p in candidates:
             if p.exists():
                 return p

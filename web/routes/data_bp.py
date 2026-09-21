@@ -96,22 +96,31 @@ def export_csv():
 
 @bp.route("/art-upload", methods=["POST"])
 def art_upload():
-    file = request.files.get("file")
-    if not file or not file.filename:
+    files = [f for f in request.files.getlist("files") if f and f.filename]
+    if not files:
+        single = request.files.get("file")
+        files = [single] if single and single.filename else []
+    if not files:
         return jsonify({"ok": False, "error": "Nenhum arquivo enviado"}), 400
+    saved = []
     try:
-        fname = assets_service.save_library_image(file, g.collection)
+        for file in files:
+            fname = assets_service.save_library_image(file, g.collection)
+            saved.append({"filename": fname,
+                          "url": url_for("data_bp.library_file", filename=fname)})
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
-    return jsonify({"ok": True, "filename": fname,
-                     "url": url_for("data_bp.library_file", filename=fname)})
+    first = saved[0]
+    return jsonify({"ok": True, "files": saved, **first})
 
 
 @bp.route("/library")
 def library():
     files = assets_service.list_library_images(g.collection)
+    dataset = sd.load_dataset()
     return jsonify([
-        {"filename": f, "url": url_for("data_bp.library_file", filename=f)}
+        {"filename": f, "url": url_for("data_bp.library_file", filename=f),
+         "usage_count": len(assets_service.find_image_references(dataset, f))}
         for f in files
     ])
 
@@ -119,3 +128,61 @@ def library():
 @bp.route("/library/<path:filename>")
 def library_file(filename):
     return send_from_directory(collections.library_dir(g.collection), filename)
+
+
+@bp.route("/library/<path:filename>/replace", methods=["POST"])
+def library_replace(filename):
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"ok": False, "error": "Nenhum arquivo enviado"}), 400
+    try:
+        saved = assets_service.replace_library_image(file, g.collection, filename)
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "Imagem não encontrada."}), 404
+    except (ValueError, OSError) as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    return jsonify({"ok": True, "filename": saved,
+                    "url": url_for("data_bp.library_file", filename=saved)})
+
+
+@bp.route("/library/<path:filename>/rename", methods=["POST"])
+def library_rename(filename):
+    payload = request.get_json(force=True, silent=True) or {}
+    requested = (payload.get("name") or "").strip()
+    if not requested:
+        return jsonify({"ok": False, "error": "Informe o novo nome."}), 400
+    dataset = sd.load_dataset()
+    try:
+        new_name = assets_service.rename_library_image(g.collection, filename, requested)
+        updated = assets_service.rename_image_references(dataset, filename, new_name)
+        if updated:
+            sd.save_dataset(dataset.get("columns") or [], dataset.get("rows") or [])
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "Imagem não encontrada."}), 404
+    except (ValueError, OSError) as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    return jsonify({"ok": True, "filename": new_name, "updated_references": updated})
+
+
+@bp.route("/library/<path:filename>/usage")
+def library_usage(filename):
+    references = assets_service.find_image_references(sd.load_dataset(), filename)
+    return jsonify({"ok": True, "filename": filename, "count": len(references),
+                    "references": references})
+
+
+@bp.route("/library/<path:filename>/delete", methods=["POST"])
+def library_delete(filename):
+    dataset = sd.load_dataset()
+    references = assets_service.find_image_references(dataset, filename)
+    payload = request.get_json(force=True, silent=True) or {}
+    if references and not payload.get("confirmed"):
+        return jsonify({"ok": False, "requires_confirmation": True,
+                        "usage_count": len(references)}), 409
+    try:
+        assets_service.delete_library_image(g.collection, filename)
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "Imagem não encontrada."}), 404
+    except (ValueError, OSError) as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    return jsonify({"ok": True, "usage_count": len(references)})
